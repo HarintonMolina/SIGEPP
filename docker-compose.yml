@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sigepp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sigepp
+      POSTGRES_PASSWORD: sigepp
+      POSTGRES_DB: sigepp
+    ports:
+      - '5432:5432'
+    volumes:
+      - sigepp-db-data:/var/lib/postgresql/data
+      - ./backend/prisma/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sigepp -d sigepp']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sigepp-db-data:

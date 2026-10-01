@@ -1,0 +1,100 @@
+# SIGEPP
+
+**Sistema de Gestión del Ejercicio Profesional y Prácticas Profesionales**
+Programa Académico de Ingeniería en Sistemas — UNI, Recinto Universitario Simón Bolívar.
+
+Proyecto de la asignatura *Diseño de Sistemas en Internet* (2026).
+Integrantes: Leandro Enrique Lacayo Matus · Harinton Alberto Molina Narváez.
+
+## Arquitectura
+
+| Capa | Tecnología |
+|---|---|
+| Frontend (SPA) | React 18 · Vite · TypeScript · Tailwind CSS · TanStack Query |
+| Backend (API REST) | Node.js 20+ · Express 4 · TypeScript · Zod · JWT |
+| Base de datos | PostgreSQL 16 · Prisma ORM |
+| Documentación del API | OpenAPI 3.1 (Swagger UI) · colección Postman |
+
+```
+sigepp/
+├── backend/            API REST (/api/v1)
+├── frontend/           SPA
+├── docs/               documentación por fase, diagramas, manual y evidencias
+└── docker-compose.yml  PostgreSQL local
+```
+
+## Requisitos
+
+- Node.js 20 o superior
+- Docker Desktop (para PostgreSQL), o un PostgreSQL 16 instalado localmente
+
+## Puesta en marcha del backend
+
+```bash
+# 1. Levantar PostgreSQL (crea las bases sigepp y sigepp_test)
+docker compose up -d
+
+# 2. Instalar dependencias y configurar variables de entorno
+cd backend
+npm install
+cp .env.example .env
+
+# 3. Crear las tablas y cargar datos de prueba
+npm run db:migrate
+npm run db:seed
+
+# 4. Iniciar el servidor en modo desarrollo
+npm run dev
+```
+
+El API queda en `http://localhost:4000`. Verificación: `GET http://localhost:4000/api/health`.
+
+### Scripts del backend
+
+| Script | Descripción |
+|---|---|
+| `npm run dev` | Servidor con recarga automática |
+| `npm test` | Pruebas unitarias y de integración (usa la base `sigepp_test`) |
+| `npm run lint` · `npm run typecheck` | Verificación de estilo y de tipos |
+| `npm run db:migrate` | Aplica migraciones en desarrollo |
+| `npm run db:seed` | Carga datos de prueba |
+| `npm run db:reset` | Borra la base, reaplica migraciones y vuelve a cargar el seed |
+| `npm run db:studio` | Abre Prisma Studio para explorar los datos |
+
+### Cuentas de prueba (seed)
+
+Todas usan la contraseña **`Sigepp2026`**.
+
+| Rol | Correo |
+|---|---|
+| Administrador | `admin@uni.edu.ni` |
+| Coordinador | `coordinacion.sistemas@uni.edu.ni` |
+| Tutor académico | `jose.martinez@uni.edu.ni` |
+| Organización | `rrhh@solucionesdigitales.example` |
+| Tutor empresarial | `pedro.lopez@solucionesdigitales.example` |
+| Estudiante | `maria.gonzalez@std.uni.edu.ni` |
+| Estudiante con 74 % de avance (no cumple RN-01) | `diego.morales@std.uni.edu.ni` |
+
+## API — autenticación
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/v1/auth/registro` | Registro de estudiante o docente con correo institucional |
+| POST | `/api/v1/auth/login` | Devuelve `accessToken` (15 min) y la cookie de refresco `sigepp_rt` |
+| POST | `/api/v1/auth/refresh` | Renueva el token de acceso usando la cookie |
+| POST | `/api/v1/auth/logout` | Cierra la sesión |
+| GET | `/api/v1/auth/yo` | Usuario autenticado (`Authorization: Bearer <token>`) |
+
+Errores con formato uniforme:
+
+```json
+{ "error": { "codigo": "VALIDACION", "mensaje": "Los datos enviados no son válidos", "detalles": ["correo: Correo no válido"] } }
+```
+
+## Flujo de trabajo
+
+- Ramas: `main` ← `develop` ← `feature/RF-XX-descripcion`
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat(plazas): ...`, `fix(auth): ...`)
+- Todo PR hacia `develop` es revisado por el otro integrante.
+
+Plan detallado: [`docs/fase-2/plan-de-sprints.md`](docs/fase-2/plan-de-sprints.md).
