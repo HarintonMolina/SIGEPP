@@ -82,6 +82,9 @@ Especificación OpenAPI 3.1: `http://localhost:4000/api/docs/openapi.json`
 
 La especificación se genera a partir de los mismos esquemas Zod que validan cada petición, por lo que no puede quedar desactualizada respecto al código.
 
+- Colección de Postman, entorno y `openapi.json` exportado: [`docs/fase-2/api`](docs/fase-2/api)
+- Diagrama entidad-relación y diagrama de clases: [`docs/fase-2/diagramas`](docs/fase-2/diagramas)
+
 | Método | Ruta | Descripción | Rol |
 |---|---|---|---|
 | POST | `/api/v1/auth/registro` | Registro de estudiante o docente con correo institucional | Público |

@@ -1,0 +1,30 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "arial,sans-serif",
+    "fontSize": "14px",
+    "primaryColor": "#1F3864",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#1F3864",
+    "secondaryColor": "#D9E2F3",
+    "tertiaryColor": "#F7F7F9",
+    "lineColor": "#2E5496",
+    "textColor": "#1F3864",
+    "mainBkg": "#1F3864",
+    "nodeBorder": "#1F3864",
+    "classText": "#ffffff",
+    "attributeBackgroundColorOdd": "#2E5496",
+    "attributeBackgroundColorEven": "#1F3864",
+    "relationLabelColor": "#1F3864",
+    "relationLabelBackground": "#ffffff",
+    "edgeLabelBackground": "#ffffff"
+  },
+  "er": {
+    "layoutDirection": "TB",
+    "minEntityWidth": 120
+  },
+  "class": {
+    "hideEmptyMembersBox": true
+  },
+  "themeCSS": ".row-rect-odd path, .row-rect-odd rect { fill: #2E5496 !important; stroke: #1F3864 !important; } .row-rect-even path, .row-rect-even rect { fill: #1F3864 !important; stroke: #1F3864 !important; } .attribute-type, .attribute-name, .attribute-keys, .attribute-comment { color: #ffffff !important; fill: #ffffff !important; } .labelBkg, .edgeLabel { background-color: #ffffff !important; } .edgeLabel p, .edgeLabel span, .edgeLabel .label, .edgeLabel text { color: #1F3864 !important; fill: #1F3864 !important; font-weight: bold; } .edgeLabel rect { fill: #ffffff !important; opacity: 1 !important; }"
+}

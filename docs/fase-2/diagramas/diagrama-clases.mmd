@@ -1,0 +1,229 @@
+classDiagram
+  direction LR
+  class Usuario {
+    +String id
+    +String nombres
+    +String apellidos
+    +String correo
+    -String hashContrasena
+    +Rol rol
+    +EstadoUsuario estado
+    +String telefono
+    -Int intentosFallidos
+    -Int bloqueos
+    -DateTime bloqueadoHasta
+    +DateTime creadoEn
+    +DateTime actualizadoEn
+    +registrar(datos) Usuario
+    +iniciarSesion(correo, contrasena) Sesion
+    -bloquearPorIntentos()
+  }
+  class Estudiante {
+    +String id
+    +String carnet
+    +String carrera
+    +Int anio
+    +Decimal porcentajeAvance
+    +Boolean avanceVerificado
+    +String constanciaUrl
+  }
+  class Docente {
+    +String id
+    +String departamento
+    +String especialidad
+    +Int cupoMaximo
+    +Int cupoOcupado
+    +tieneCupo() boolean
+  }
+  class Organizacion {
+    +String id
+    +String razonSocial
+    +String ruc
+    +String sector
+    +String direccion
+    +String sitioWeb
+    +EstadoVerificacion estadoVerificacion
+    +DateTime convenioVigenteHasta
+    +DateTime creadaEn
+    +registrar(datos, representante) Organizacion
+    +verificar(estado, convenioVigenteHasta)
+    +tieneConvenioVigente() boolean
+    +darDeAltaTutor(datos) TutorEmpresarial
+  }
+  class TutorEmpresarial {
+    +String id
+    +String cargo
+    +Boolean activo
+    +darDeBaja()
+    +reactivar()
+  }
+  class Periodo {
+    +String id
+    +String nombre
+    +Int anio
+    +Int semestre
+    +DateTime fechaInicio
+    +DateTime fechaFin
+    +Int horasMinimas
+    +Boolean convocatoriaAbierta
+    +Boolean activo
+  }
+  class Plaza {
+    +String id
+    +String titulo
+    +String descripcion
+    +String area
+    +Modalidad modalidad
+    +String ubicacion
+    +Int cupos
+    +Int cuposOcupados
+    +String horario
+    +String[] competencias
+    +EstadoPlaza estado
+    +String motivoRechazo
+    +DateTime publicadaEn
+    +DateTime creadaEn
+    +DateTime actualizadaEn
+    +publicar(datos) Plaza
+    +aprobar(coordinador)
+    +rechazar(motivo)
+    +corregir(datos)
+    +cuposDisponibles() int
+  }
+  class Postulacion {
+    +String id
+    +String cartaMotivacion
+    +EstadoPostulacion estado
+    +DateTime creadaEn
+    +DateTime resueltaEn
+    +preseleccionar()
+    +rechazar()
+    +retirar()
+  }
+  class Asignacion {
+    +String id
+    +EstadoAsignacion estado
+    +DateTime fechaInicio
+    +DateTime fechaFin
+    +Int horasAcumuladas
+    +Decimal notaFinal
+    +DateTime creadaEn
+    +DateTime eliminadaEn
+    +confirmar(postulacion, docente, tutor) Asignacion
+    +hitos() Hito[]
+    +progreso() Progreso
+  }
+  class PlanTrabajo {
+    +String id
+    +Int version
+    +String objetivos
+    +Json actividades
+    +Int horasPrevistas
+    +EstadoPlan estado
+    +DateTime aprobadoDocenteEn
+    +DateTime aprobadoEmpresaEn
+    +DateTime actualizadoEn
+    +actualizar(objetivos, actividades)
+    +enviarARevision() PlanTrabajoVersion
+    +aprobar(tutor)
+    +observar(tutor, observacion)
+  }
+  class PlanTrabajoVersion {
+    +String id
+    +Int version
+    +String objetivos
+    +Json actividades
+    +Int horasPrevistas
+    +String observacionDocente
+    +String observacionEmpresa
+    +DateTime creadaEn
+  }
+  class Bitacora {
+    +String id
+    +Int quincena
+    +DateTime fechaInicio
+    +DateTime fechaFin
+    +String actividades
+    +Int horas
+    +EstadoBitacora estado
+    +String observacionTutor
+    +Boolean extemporanea
+    +DateTime enviadaEn
+    +DateTime creadaEn
+    +DateTime eliminadaEn
+    +enviar()
+    +revisar(decision, observacion)
+  }
+  class Rubrica {
+    +String id
+    +String nombre
+    +TipoEvaluador tipoEvaluador
+    +Json criterios
+    +Int puntajeMaximo
+    +Boolean vigente
+  }
+  class Evaluacion {
+    +String id
+    +TipoEvaluador tipoEvaluador
+    +Json respuestas
+    +Decimal puntaje
+    +String observaciones
+    +DateTime enviadaEn
+  }
+  class Documento {
+    +String id
+    +TipoDocumento tipo
+    +String nombreArchivo
+    +String url
+    +String hashSha256
+    +String codigoVerificacion
+    +DateTime generadoEn
+  }
+  class Notificacion {
+    +String id
+    +String tipo
+    +String titulo
+    +String mensaje
+    +String enlace
+    +Boolean leida
+    +DateTime creadaEn
+    +marcarLeida()
+  }
+  class Auditoria {
+    +String id
+    +String entidad
+    +String entidadId
+    +String accion
+    +Json valoresAnteriores
+    +Json valoresNuevos
+    +String ip
+    +DateTime creadaEn
+  }
+  Usuario "1" -- "0..1" Estudiante : tiene perfil de
+  Usuario "1" -- "0..1" Docente : tiene perfil de
+  Usuario "1" -- "0..1" Organizacion : representa
+  Usuario "1" -- "0..1" TutorEmpresarial : tiene perfil de
+  Organizacion "1" -- "0..*" TutorEmpresarial : emplea
+  Organizacion "1" -- "0..*" Plaza : publica
+  Periodo "1" -- "0..*" Plaza : enmarca
+  Usuario "0..1" -- "0..*" Plaza : aprueba
+  Estudiante "1" -- "0..*" Postulacion : envía
+  Plaza "1" -- "0..*" Postulacion : recibe
+  Postulacion "1" -- "0..1" Asignacion : deriva en
+  Estudiante "1" -- "0..*" Asignacion : realiza
+  Plaza "1" -- "0..*" Asignacion : concreta
+  Docente "1" -- "0..*" Asignacion : supervisa (académico)
+  TutorEmpresarial "1" -- "0..*" Asignacion : supervisa (empresa)
+  Periodo "1" -- "0..*" Asignacion : agrupa
+  Asignacion "1" *-- "0..1" PlanTrabajo : define
+  PlanTrabajo "1" *-- "0..*" PlanTrabajoVersion : versiona
+  Asignacion "1" *-- "0..*" Bitacora : acumula
+  Periodo "1" -- "0..*" Rubrica : habilita
+  Asignacion "1" *-- "0..*" Evaluacion : recibe
+  Rubrica "1" -- "0..*" Evaluacion : aplica
+  Usuario "1" -- "0..*" Evaluacion : evalúa
+  Estudiante "0..1" -- "0..*" Documento : adjunta
+  Asignacion "0..1" -- "0..*" Documento : genera
+  Bitacora "0..1" -- "0..*" Documento : evidencia
+  Usuario "1" -- "0..*" Notificacion : recibe
+  Usuario "0..1" -- "0..*" Auditoria : registra

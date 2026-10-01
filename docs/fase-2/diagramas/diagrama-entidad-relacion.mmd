@@ -1,0 +1,237 @@
+erDiagram
+  USUARIO ||--o{ REFRESH_TOKEN : "mantiene sesión"
+  USUARIO ||--o| ESTUDIANTE : "tiene perfil de"
+  USUARIO ||--o| DOCENTE : "tiene perfil de"
+  USUARIO ||--o| ORGANIZACION : "representa"
+  USUARIO ||--o| TUTOR_EMPRESARIAL : "tiene perfil de"
+  ORGANIZACION ||--o{ TUTOR_EMPRESARIAL : "emplea"
+  ORGANIZACION ||--o{ PLAZA : "publica"
+  PERIODO ||--o{ PLAZA : "enmarca"
+  USUARIO |o--o{ PLAZA : "aprueba"
+  ESTUDIANTE ||--o{ POSTULACION : "envía"
+  PLAZA ||--o{ POSTULACION : "recibe"
+  POSTULACION ||--o| ASIGNACION : "deriva en"
+  ESTUDIANTE ||--o{ ASIGNACION : "realiza"
+  PLAZA ||--o{ ASIGNACION : "concreta"
+  DOCENTE ||--o{ ASIGNACION : "supervisa (académico)"
+  TUTOR_EMPRESARIAL ||--o{ ASIGNACION : "supervisa (empresa)"
+  PERIODO ||--o{ ASIGNACION : "agrupa"
+  ASIGNACION ||--o| PLAN_TRABAJO : "define"
+  PLAN_TRABAJO ||--o{ PLAN_TRABAJO_VERSION : "versiona"
+  ASIGNACION ||--o{ BITACORA : "acumula"
+  PERIODO ||--o{ RUBRICA : "habilita"
+  ASIGNACION ||--o{ EVALUACION : "recibe"
+  RUBRICA ||--o{ EVALUACION : "aplica"
+  USUARIO ||--o{ EVALUACION : "evalúa"
+  ESTUDIANTE |o--o{ DOCUMENTO : "adjunta"
+  ASIGNACION |o--o{ DOCUMENTO : "genera"
+  BITACORA |o--o{ DOCUMENTO : "evidencia"
+  USUARIO ||--o{ NOTIFICACION : "recibe"
+  USUARIO |o--o{ AUDITORIA : "registra"
+  USUARIO {
+    string id PK
+    string nombres
+    string apellidos
+    string correo UK
+    string hashContrasena
+    enum rol "Rol"
+    enum estado "EstadoUsuario"
+    string telefono
+    int intentosFallidos
+    int bloqueos
+    datetime bloqueadoHasta
+    datetime creadoEn
+    datetime actualizadoEn
+  }
+  REFRESH_TOKEN {
+    string id PK
+    string usuarioId FK
+    string tokenHash UK
+    datetime expiraEn
+    datetime revocadoEn
+    datetime creadoEn
+  }
+  ESTUDIANTE {
+    string id PK
+    string usuarioId FK, UK
+    string carnet UK
+    string carrera
+    int anio
+    decimal porcentajeAvance
+    boolean avanceVerificado
+    string constanciaUrl
+  }
+  DOCENTE {
+    string id PK
+    string usuarioId FK, UK
+    string departamento
+    string especialidad
+    int cupoMaximo
+    int cupoOcupado
+  }
+  ORGANIZACION {
+    string id PK
+    string razonSocial
+    string ruc UK
+    string sector
+    string direccion
+    string sitioWeb
+    enum estadoVerificacion "EstadoVerificacion"
+    datetime convenioVigenteHasta
+    string representanteId FK, UK
+    datetime creadaEn
+  }
+  TUTOR_EMPRESARIAL {
+    string id PK
+    string usuarioId FK, UK
+    string organizacionId FK
+    string cargo
+    boolean activo
+  }
+  PERIODO {
+    string id PK
+    string nombre
+    int anio
+    int semestre
+    datetime fechaInicio
+    datetime fechaFin
+    int horasMinimas
+    boolean convocatoriaAbierta
+    boolean activo
+  }
+  PLAZA {
+    string id PK
+    string organizacionId FK
+    string periodoId FK
+    string titulo
+    string descripcion
+    string area
+    enum modalidad "Modalidad"
+    string ubicacion
+    int cupos
+    int cuposOcupados
+    string horario
+    string_array competencias
+    enum estado "EstadoPlaza"
+    string motivoRechazo
+    string aprobadaPorId FK
+    datetime publicadaEn
+    datetime creadaEn
+    datetime actualizadaEn
+  }
+  POSTULACION {
+    string id PK
+    string estudianteId FK
+    string plazaId FK
+    string cartaMotivacion
+    enum estado "EstadoPostulacion"
+    datetime creadaEn
+    datetime resueltaEn
+  }
+  ASIGNACION {
+    string id PK
+    string postulacionId FK, UK
+    string estudianteId FK
+    string plazaId FK
+    string docenteId FK
+    string tutorEmpresarialId FK
+    string periodoId FK
+    enum estado "EstadoAsignacion"
+    datetime fechaInicio
+    datetime fechaFin
+    int horasAcumuladas
+    decimal notaFinal
+    datetime creadaEn
+    datetime eliminadaEn
+  }
+  PLAN_TRABAJO {
+    string id PK
+    string asignacionId FK, UK
+    int version
+    string objetivos
+    jsonb actividades
+    int horasPrevistas
+    enum estado "EstadoPlan"
+    datetime aprobadoDocenteEn
+    datetime aprobadoEmpresaEn
+    datetime actualizadoEn
+  }
+  PLAN_TRABAJO_VERSION {
+    string id PK
+    string planId FK
+    int version
+    string objetivos
+    jsonb actividades
+    int horasPrevistas
+    string observacionDocente
+    string observacionEmpresa
+    datetime creadaEn
+  }
+  BITACORA {
+    string id PK
+    string asignacionId FK
+    int quincena
+    datetime fechaInicio
+    datetime fechaFin
+    string actividades
+    int horas
+    enum estado "EstadoBitacora"
+    string observacionTutor
+    boolean extemporanea
+    datetime enviadaEn
+    datetime creadaEn
+    datetime eliminadaEn
+  }
+  RUBRICA {
+    string id PK
+    string periodoId FK
+    string nombre
+    enum tipoEvaluador "TipoEvaluador"
+    jsonb criterios
+    int puntajeMaximo
+    boolean vigente
+  }
+  EVALUACION {
+    string id PK
+    string asignacionId FK
+    string rubricaId FK
+    string evaluadorId FK
+    enum tipoEvaluador "TipoEvaluador"
+    jsonb respuestas
+    decimal puntaje
+    string observaciones
+    datetime enviadaEn
+  }
+  DOCUMENTO {
+    string id PK
+    string estudianteId FK
+    string asignacionId FK
+    string bitacoraId FK
+    enum tipo "TipoDocumento"
+    string nombreArchivo
+    string url
+    string hashSha256
+    string codigoVerificacion UK
+    datetime generadoEn
+  }
+  NOTIFICACION {
+    string id PK
+    string usuarioId FK
+    string tipo
+    string titulo
+    string mensaje
+    string enlace
+    boolean leida
+    datetime creadaEn
+  }
+  AUDITORIA {
+    string id PK
+    string usuarioId FK
+    string entidad
+    string entidadId
+    string accion
+    jsonb valoresAnteriores
+    jsonb valoresNuevos
+    string ip
+    datetime creadaEn
+  }
