@@ -75,15 +75,34 @@ Todas usan la contraseña **`Sigepp2026`**.
 | Estudiante | `maria.gonzalez@std.uni.edu.ni` |
 | Estudiante con 74 % de avance (no cumple RN-01) | `diego.morales@std.uni.edu.ni` |
 
-## API — autenticación
+## API REST
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/api/v1/auth/registro` | Registro de estudiante o docente con correo institucional |
-| POST | `/api/v1/auth/login` | Devuelve `accessToken` (15 min) y la cookie de refresco `sigepp_rt` |
-| POST | `/api/v1/auth/refresh` | Renueva el token de acceso usando la cookie |
-| POST | `/api/v1/auth/logout` | Cierra la sesión |
-| GET | `/api/v1/auth/yo` | Usuario autenticado (`Authorization: Bearer <token>`) |
+Documentación interactiva (Swagger UI): **http://localhost:4000/api/docs**
+Especificación OpenAPI 3.1: `http://localhost:4000/api/docs/openapi.json`
+
+La especificación se genera a partir de los mismos esquemas Zod que validan cada petición, por lo que no puede quedar desactualizada respecto al código.
+
+| Método | Ruta | Descripción | Rol |
+|---|---|---|---|
+| POST | `/api/v1/auth/registro` | Registro de estudiante o docente con correo institucional | Público |
+| POST | `/api/v1/auth/login` | Devuelve `accessToken` (15 min) y la cookie de refresco `sigepp_rt` | Público |
+| POST | `/api/v1/auth/refresh` | Renueva el token de acceso usando la cookie | Sesión |
+| POST | `/api/v1/auth/logout` | Cierra la sesión | Sesión |
+| GET | `/api/v1/auth/yo` | Usuario autenticado | Autenticado |
+| POST | `/api/v1/organizaciones` | Registro de organización receptora (queda PENDIENTE) | Público |
+| GET | `/api/v1/organizaciones` | Listado con filtro por estado | Coord., Admin. |
+| GET | `/api/v1/organizaciones/mia` | Organización del representante | Organización |
+| PATCH | `/api/v1/organizaciones/{id}/verificar` | Verificar y registrar vigencia del convenio | Coord., Admin. |
+| GET · POST | `/api/v1/organizaciones/{id}/tutores` | Listar y dar de alta tutores empresariales | Organización |
+| PATCH | `/api/v1/organizaciones/{id}/tutores/{tutorId}` | Dar de baja o reactivar un tutor | Organización |
+| GET | `/api/v1/plazas` | Búsqueda con filtros, orden y paginación | Autenticado |
+| GET | `/api/v1/plazas/filtros` | Opciones para el panel de filtros | Autenticado |
+| GET | `/api/v1/plazas/mias` | Plazas de mi organización en todos sus estados | Organización |
+| GET | `/api/v1/plazas/{id}` | Detalle de una plaza | Autenticado |
+| POST | `/api/v1/plazas` | Publicar plaza (queda EN_REVISION) | Organización |
+| PUT | `/api/v1/plazas/{id}` | Corregir una plaza en revisión o rechazada | Organización |
+| PATCH | `/api/v1/plazas/{id}/aprobar` · `/rechazar` | Revisión académica de la plaza | Coord., Admin. |
+| GET | `/api/v1/publico/plazas` | Plazas vigentes para sistemas externos | Público |
 
 Errores con formato uniforme:
 
