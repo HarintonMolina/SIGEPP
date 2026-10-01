@@ -1,0 +1,431 @@
+// Modelo de datos de SIGEPP (Fase 1, sección 5.4).
+// Las restricciones CHECK y el índice único parcial de Asignacion no se pueden
+// expresar en Prisma; se agregan con SQL en la migración "restricciones".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enumeraciones ──────────────────────────────────────────────
+
+enum Rol {
+  ESTUDIANTE
+  TUTOR_ACADEMICO
+  TUTOR_EMPRESARIAL
+  ORGANIZACION
+  COORDINADOR
+  ADMIN
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoVerificacion {
+  PENDIENTE
+  VERIFICADA
+  RECHAZADA
+}
+
+enum Modalidad {
+  PRESENCIAL
+  REMOTA
+  HIBRIDA
+}
+
+enum EstadoPlaza {
+  EN_REVISION
+  APROBADA
+  RECHAZADA
+  CERRADA
+}
+
+enum EstadoPostulacion {
+  POSTULADA
+  PRESELECCIONADA
+  RECHAZADA
+  RETIRADA
+  ASIGNADA
+}
+
+enum EstadoAsignacion {
+  ASIGNADA
+  EN_CURSO
+  FINALIZADA
+  CANCELADA
+}
+
+enum EstadoPlan {
+  BORRADOR
+  EN_REVISION
+  OBSERVADO
+  APROBADO
+}
+
+enum EstadoBitacora {
+  BORRADOR
+  ENVIADA
+  OBSERVADA
+  APROBADA
+}
+
+enum TipoEvaluador {
+  ACADEMICO
+  EMPRESARIAL
+}
+
+enum TipoDocumento {
+  CARTA_PRESENTACION
+  CONSTANCIA_PRACTICAS
+  ACTA_APROBACION
+  CONSTANCIA_ACADEMICA
+  CURRICULO
+  EVIDENCIA
+}
+
+// ─── Usuarios y perfiles ───────────────────────────────────────
+
+model Usuario {
+  id               String        @id @default(cuid())
+  nombres          String
+  apellidos        String
+  correo           String        @unique
+  hashContrasena   String
+  rol              Rol
+  estado           EstadoUsuario @default(ACTIVO)
+  telefono         String?
+  intentosFallidos Int           @default(0)
+  bloqueos         Int           @default(0)
+  bloqueadoHasta   DateTime?
+  creadoEn         DateTime      @default(now())
+  actualizadoEn    DateTime      @updatedAt
+
+  estudiante       Estudiante?
+  docente          Docente?
+  tutorEmpresarial TutorEmpresarial?
+  organizacion     Organizacion?     @relation("RepresentanteOrganizacion")
+  refreshTokens    RefreshToken[]
+  notificaciones   Notificacion[]
+  evaluaciones     Evaluacion[]
+  plazasAprobadas  Plaza[]           @relation("PlazaAprobadaPor")
+  auditorias       Auditoria[]
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  usuarioId  String
+  tokenHash  String    @unique
+  expiraEn   DateTime
+  revocadoEn DateTime?
+  creadoEn   DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+}
+
+model Estudiante {
+  id               String  @id @default(cuid())
+  usuarioId        String  @unique
+  carnet           String  @unique
+  carrera          String
+  anio             Int
+  porcentajeAvance Decimal @default(0) @db.Decimal(5, 2)
+  avanceVerificado Boolean @default(false)
+  constanciaUrl    String?
+
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  postulaciones Postulacion[]
+  asignaciones  Asignacion[]
+  documentos    Documento[]
+}
+
+model Docente {
+  id           String  @id @default(cuid())
+  usuarioId    String  @unique
+  departamento String
+  especialidad String?
+  cupoMaximo   Int     @default(8)
+  cupoOcupado  Int     @default(0)
+
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
+  asignaciones Asignacion[]
+}
+
+model Organizacion {
+  id                   String             @id @default(cuid())
+  razonSocial          String
+  ruc                  String             @unique
+  sector               String
+  direccion            String
+  sitioWeb             String?
+  estadoVerificacion   EstadoVerificacion @default(PENDIENTE)
+  convenioVigenteHasta DateTime?
+  representanteId      String             @unique
+  creadaEn             DateTime           @default(now())
+
+  representante        Usuario            @relation("RepresentanteOrganizacion", fields: [representanteId], references: [id])
+  tutoresEmpresariales TutorEmpresarial[]
+  plazas               Plaza[]
+}
+
+model TutorEmpresarial {
+  id             String  @id @default(cuid())
+  usuarioId      String  @unique
+  organizacionId String
+  cargo          String
+  activo         Boolean @default(true)
+
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id])
+  asignaciones Asignacion[]
+
+  @@index([organizacionId])
+}
+
+// ─── Período académico ─────────────────────────────────────────
+
+model Periodo {
+  id                  String   @id @default(cuid())
+  nombre              String
+  anio                Int
+  semestre            Int
+  fechaInicio         DateTime
+  fechaFin            DateTime
+  horasMinimas        Int      @default(240)
+  convocatoriaAbierta Boolean  @default(false)
+  activo              Boolean  @default(false)
+
+  plazas       Plaza[]
+  asignaciones Asignacion[]
+  rubricas     Rubrica[]
+
+  @@unique([anio, semestre])
+}
+
+// ─── Plazas y postulaciones ────────────────────────────────────
+
+model Plaza {
+  id             String      @id @default(cuid())
+  organizacionId String
+  periodoId      String
+  titulo         String
+  descripcion    String
+  area           String
+  modalidad      Modalidad
+  ubicacion      String
+  cupos          Int
+  cuposOcupados  Int         @default(0)
+  horario        String
+  competencias   String[]
+  estado         EstadoPlaza @default(EN_REVISION)
+  motivoRechazo  String?
+  aprobadaPorId  String?
+  publicadaEn    DateTime?
+  creadaEn       DateTime    @default(now())
+  actualizadaEn  DateTime    @updatedAt
+
+  organizacion  Organizacion  @relation(fields: [organizacionId], references: [id])
+  periodo       Periodo       @relation(fields: [periodoId], references: [id])
+  aprobadaPor   Usuario?      @relation("PlazaAprobadaPor", fields: [aprobadaPorId], references: [id])
+  postulaciones Postulacion[]
+  asignaciones  Asignacion[]
+
+  @@index([estado, periodoId, area])
+  @@index([organizacionId])
+}
+
+model Postulacion {
+  id              String            @id @default(cuid())
+  estudianteId    String
+  plazaId         String
+  cartaMotivacion String
+  estado          EstadoPostulacion @default(POSTULADA)
+  creadaEn        DateTime          @default(now())
+  resueltaEn      DateTime?
+
+  estudiante Estudiante  @relation(fields: [estudianteId], references: [id])
+  plaza      Plaza       @relation(fields: [plazaId], references: [id])
+  asignacion Asignacion?
+
+  @@unique([estudianteId, plazaId])
+  @@index([plazaId, estado])
+}
+
+// ─── Expediente ────────────────────────────────────────────────
+
+model Asignacion {
+  id                 String           @id @default(cuid())
+  postulacionId      String           @unique
+  estudianteId       String
+  plazaId            String
+  docenteId          String
+  tutorEmpresarialId String
+  periodoId          String
+  estado             EstadoAsignacion @default(ASIGNADA)
+  fechaInicio        DateTime
+  fechaFin           DateTime
+  horasAcumuladas    Int              @default(0)
+  notaFinal          Decimal?         @db.Decimal(5, 2)
+  creadaEn           DateTime         @default(now())
+  eliminadaEn        DateTime?
+
+  postulacion      Postulacion      @relation(fields: [postulacionId], references: [id])
+  estudiante       Estudiante       @relation(fields: [estudianteId], references: [id])
+  plaza            Plaza            @relation(fields: [plazaId], references: [id])
+  docente          Docente          @relation(fields: [docenteId], references: [id])
+  tutorEmpresarial TutorEmpresarial @relation(fields: [tutorEmpresarialId], references: [id])
+  periodo          Periodo          @relation(fields: [periodoId], references: [id])
+  planTrabajo      PlanTrabajo?
+  bitacoras        Bitacora[]
+  evaluaciones     Evaluacion[]
+  documentos       Documento[]
+
+  @@index([estado, periodoId])
+  @@index([docenteId, periodoId])
+}
+
+model PlanTrabajo {
+  id                String     @id @default(cuid())
+  asignacionId      String     @unique
+  version           Int        @default(1)
+  objetivos         String
+  actividades       Json
+  horasPrevistas    Int
+  estado            EstadoPlan @default(BORRADOR)
+  aprobadoDocenteEn DateTime?
+  aprobadoEmpresaEn DateTime?
+  actualizadoEn     DateTime   @updatedAt
+
+  asignacion Asignacion           @relation(fields: [asignacionId], references: [id])
+  versiones  PlanTrabajoVersion[]
+}
+
+model PlanTrabajoVersion {
+  id                 String   @id @default(cuid())
+  planId             String
+  version            Int
+  objetivos          String
+  actividades        Json
+  horasPrevistas     Int
+  observacionDocente String?
+  observacionEmpresa String?
+  creadaEn           DateTime @default(now())
+
+  plan PlanTrabajo @relation(fields: [planId], references: [id])
+
+  @@unique([planId, version])
+}
+
+model Bitacora {
+  id               String         @id @default(cuid())
+  asignacionId     String
+  quincena         Int
+  fechaInicio      DateTime
+  fechaFin         DateTime
+  actividades      String
+  horas            Int
+  estado           EstadoBitacora @default(BORRADOR)
+  observacionTutor String?
+  extemporanea     Boolean        @default(false)
+  enviadaEn        DateTime?
+  creadaEn         DateTime       @default(now())
+  eliminadaEn      DateTime?
+
+  asignacion Asignacion  @relation(fields: [asignacionId], references: [id])
+  evidencias Documento[]
+
+  @@unique([asignacionId, quincena])
+}
+
+// ─── Evaluación ────────────────────────────────────────────────
+
+model Rubrica {
+  id            String        @id @default(cuid())
+  periodoId     String
+  nombre        String
+  tipoEvaluador TipoEvaluador
+  criterios     Json
+  puntajeMaximo Int           @default(100)
+  vigente       Boolean       @default(true)
+
+  periodo      Periodo      @relation(fields: [periodoId], references: [id])
+  evaluaciones Evaluacion[]
+}
+
+model Evaluacion {
+  id            String        @id @default(cuid())
+  asignacionId  String
+  rubricaId     String
+  evaluadorId   String
+  tipoEvaluador TipoEvaluador
+  respuestas    Json
+  puntaje       Decimal       @db.Decimal(5, 2)
+  observaciones String?
+  enviadaEn     DateTime      @default(now())
+
+  asignacion Asignacion @relation(fields: [asignacionId], references: [id])
+  rubrica    Rubrica    @relation(fields: [rubricaId], references: [id])
+  evaluador  Usuario    @relation(fields: [evaluadorId], references: [id])
+
+  @@unique([asignacionId, tipoEvaluador])
+}
+
+// ─── Documentos, notificaciones y auditoría ────────────────────
+
+model Documento {
+  id                 String        @id @default(cuid())
+  estudianteId       String?
+  asignacionId       String?
+  bitacoraId         String?
+  tipo               TipoDocumento
+  nombreArchivo      String
+  url                String
+  hashSha256         String
+  codigoVerificacion String?       @unique
+  generadoEn         DateTime      @default(now())
+
+  estudiante Estudiante? @relation(fields: [estudianteId], references: [id])
+  asignacion Asignacion? @relation(fields: [asignacionId], references: [id])
+  bitacora   Bitacora?   @relation(fields: [bitacoraId], references: [id])
+
+  @@index([asignacionId])
+  @@index([estudianteId])
+}
+
+model Notificacion {
+  id        String   @id @default(cuid())
+  usuarioId String
+  tipo      String
+  titulo    String
+  mensaje   String
+  enlace    String?
+  leida     Boolean  @default(false)
+  creadaEn  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, leida])
+}
+
+model Auditoria {
+  id                String   @id @default(cuid())
+  usuarioId         String?
+  entidad           String
+  entidadId         String
+  accion            String
+  valoresAnteriores Json?
+  valoresNuevos     Json?
+  ip                String?
+  creadaEn          DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+}
