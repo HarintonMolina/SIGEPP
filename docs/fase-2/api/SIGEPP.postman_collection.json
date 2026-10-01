@@ -1,0 +1,2625 @@
+{
+  "info": {
+    "name": "SIGEPP API",
+    "description": "Colección del API REST de **SIGEPP** (Sistema de Gestión del Ejercicio y Prácticas Profesionales).\n\nLas carpetas forman un recorrido completo del proceso: autenticación, organizaciones, plazas, API pública, asignación y plan de trabajo. Cada petición incluye pruebas automáticas y guarda en el entorno los identificadores que usan las siguientes.\n\n**Cómo ejecutarla**\n1. Importa esta colección y el entorno `SIGEPP-local.postman_environment.json`, y selecciona el entorno **SIGEPP — Local**.\n2. Restablece los datos de prueba: `cd backend && npm run db:reset` (la asignación del estudiante del seed solo puede hacerse una vez).\n3. Inicia el API con `npm run dev` y ejecuta la colección completa con **Run collection**, o desde la terminal con `npx newman run`.\n\nEl API limita a 100 peticiones por minuto por IP (RNF-08) y la colección hace 54: espera un minuto entre dos ejecuciones completas.\n\nDocumentación OpenAPI interactiva: http://localhost:4000/api/docs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pruebas comunes a todas las peticiones",
+          "if (pm.response.code >= 400) {",
+          "  pm.test('Error con formato uniforme { error: { codigo, mensaje, detalles } }', () => {",
+          "    pm.expect(pm.response.json().error).to.include.keys('codigo', 'mensaje', 'detalles');",
+          "  });",
+          "}",
+          "if (pm.request.method === 'GET') {",
+          "  pm.test('Tiempo de respuesta menor a 500 ms (RNF-01)', () => pm.expect(pm.response.responseTime).to.be.below(500));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Salud del servicio",
+      "description": "Verifica que el API y la base de datos respondan.",
+      "item": [
+        {
+          "name": "Verificar salud del API y la base de datos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('La base de datos está conectada', () => pm.expect(pm.response.json().baseDatos).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{host}}/api/health",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Autenticación (RF-01, RF-02)",
+      "description": "Inicia sesión con cada rol del seed y guarda los tokens en el entorno para el resto de la colección.",
+      "item": [
+        {
+          "name": "Iniciar sesión — Administrador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenAdmin', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoAdmin}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar sesión — Coordinador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenCoordinador', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoCoordinador}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar sesión — Docente (tutor académico)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenDocente', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoDocente}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar sesión — Organización",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenOrganizacion', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoOrganizacion}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar sesión — Tutor empresarial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenTutor', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoTutor}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar sesión — Estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Devuelve el token de acceso', () => pm.expect(cuerpo.accessToken).to.be.a('string'));",
+                  "pm.test('Fija la cookie de refresco HttpOnly', () => pm.expect(pm.cookies.has('sigepp_rt')).to.be.true);",
+                  "pm.environment.set('tokenEstudiante', cuerpo.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoEstudiante}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Usuario autenticado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es el estudiante del seed', () => pm.expect(pm.response.json().usuario.correo).to.eql(pm.environment.get('correoEstudiante')));",
+                  "pm.test('No expone el hash de la contraseña', () => pm.expect(pm.response.json().usuario).to.not.have.property('hashContrasena'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/yo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "yo"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Credenciales incorrectas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Mensaje genérico', () => pm.expect(pm.response.json().error.mensaje).to.eql('Correo o contraseña incorrectos'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoEstudiante}}\",\n  \"contrasena\": \"Incorrecta1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar estudiante con correo institucional",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('sufijo', Date.now());",
+                  "pm.environment.set('carnetAleatorio', '2026-' + String(Math.floor(Math.random() * 10000)).padStart(4, '0') + 'U');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Crea el perfil de estudiante', () => pm.expect(pm.response.json().usuario.estudiante.carnet).to.eql(pm.environment.get('carnetAleatorio')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"ESTUDIANTE\",\n  \"nombres\": \"Estudiante\",\n  \"apellidos\": \"De Prueba\",\n  \"correo\": \"estudiante.{{sufijo}}@std.uni.edu.ni\",\n  \"contrasena\": \"Segura2026\",\n  \"carnet\": \"{{carnetAleatorio}}\",\n  \"carrera\": \"Ingeniería en Sistemas\",\n  \"anio\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registro rechazado: correo fuera del dominio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Indica el error en el correo', () => pm.expect(pm.response.json().error.detalles[0]).to.include('dominio institucional'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"ESTUDIANTE\",\n  \"nombres\": \"Ana\",\n  \"apellidos\": \"Pérez\",\n  \"correo\": \"ana.perez@gmail.com\",\n  \"contrasena\": \"Segura2026\",\n  \"carnet\": \"2026-9999U\",\n  \"carrera\": \"Ingeniería en Sistemas\",\n  \"anio\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Organizaciones (RF-05, RF-06, RF-07)",
+      "description": "Registro público de una organización, verificación por la coordinación y gestión de tutores empresariales.",
+      "item": [
+        {
+          "name": "Registrar organización receptora",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('rucAleatorio', 'J' + String(Date.now()).slice(-13));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "const org = pm.response.json().organizacion;",
+                  "pm.test('Queda pendiente de verificación', () => pm.expect(org.estadoVerificacion).to.eql('PENDIENTE'));",
+                  "pm.environment.set('organizacionNuevaId', org.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razonSocial\": \"Innovación Tecnológica del Norte, S.A.\",\n  \"ruc\": \"{{rucAleatorio}}\",\n  \"sector\": \"Tecnología\",\n  \"direccion\": \"Estelí, del parque central 1 c. al sur\",\n  \"sitioWeb\": \"https://example.com\",\n  \"representante\": {\n    \"nombres\": \"Laura\",\n    \"apellidos\": \"Centeno Díaz\",\n    \"correo\": \"rrhh.{{sufijo}}@innovacion.example\",\n    \"contrasena\": \"Segura2026\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar organizaciones pendientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye la organización registrada', () => {",
+                  "  const ids = pm.response.json().data.map((o) => o.id);",
+                  "  pm.expect(ids).to.include(pm.environment.get('organizacionNuevaId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones?estado=PENDIENTE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "PENDIENTE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verificar organización y registrar convenio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Queda verificada', () => pm.expect(pm.response.json().organizacion.estadoVerificacion).to.eql('VERIFICADA'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"VERIFICADA\",\n  \"convenioVigenteHasta\": \"2027-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones/{{organizacionNuevaId}}/verificar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones",
+                "{{organizacionNuevaId}}",
+                "verificar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estudiante no puede listar organizaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mi organización",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('organizacionId', pm.response.json().organizacion.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones/mia",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones",
+                "mia"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dar de alta un tutor empresarial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('tutorNuevoId', pm.response.json().tutor.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Mario\",\n  \"apellidos\": \"Gutiérrez Solís\",\n  \"correo\": \"tutor.{{sufijo}}@solucionesdigitales.example\",\n  \"contrasena\": \"Segura2026\",\n  \"cargo\": \"Arquitecto de software\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones/{{organizacionId}}/tutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones",
+                "{{organizacionId}}",
+                "tutores"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar tutores de la organización",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hay al menos dos tutores', () => pm.expect(pm.response.json().tutores.length).to.be.at.least(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones/{{organizacionId}}/tutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones",
+                "{{organizacionId}}",
+                "tutores"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dar de baja al tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Queda inactivo', () => pm.expect(pm.response.json().tutor.activo).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizaciones/{{organizacionId}}/tutores/{{tutorNuevoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizaciones",
+                "{{organizacionId}}",
+                "tutores",
+                "{{tutorNuevoId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Plazas (RF-08, RF-09, RF-10)",
+      "description": "Publicación por la organización, revisión académica (RN-04), búsqueda con filtros y paginación.",
+      "item": [
+        {
+          "name": "Opciones del panel de filtros",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Devuelve áreas y ubicaciones', () => pm.expect(pm.response.json().areas).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/filtros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "filtros"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar plazas (estudiante)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const cuerpo = pm.response.json();",
+                  "pm.test('Respuesta paginada', () => pm.expect(cuerpo.meta).to.include.keys('total', 'pagina', 'siguiente', 'anterior'));",
+                  "pm.test('Solo plazas aprobadas (RN-04)', () => cuerpo.data.forEach((p) => pm.expect(p.estado).to.eql('APROBADA')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas?orden=recientes&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ],
+              "query": [
+                {
+                  "key": "orden",
+                  "value": "recientes"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar por texto y modalidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todas las plazas son híbridas', () => pm.response.json().data.forEach((p) => pm.expect(p.modalidad).to.eql('HIBRIDA')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas?q=desarrollador&modalidad=HIBRIDA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "desarrollador"
+                },
+                {
+                  "key": "modalidad",
+                  "value": "HIBRIDA"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Publicar plaza",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "const plaza = pm.response.json().plaza;",
+                  "pm.test('Queda en revisión (RN-04)', () => pm.expect(plaza.estado).to.eql('EN_REVISION'));",
+                  "pm.environment.set('plazaNuevaId', plaza.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Practicante DevOps\",\n  \"descripcion\": \"Automatización de despliegues, monitoreo de servicios y soporte al equipo de desarrollo.\",\n  \"area\": \"Infraestructura\",\n  \"modalidad\": \"REMOTA\",\n  \"ubicacion\": \"Managua\",\n  \"cupos\": 1,\n  \"horario\": \"Lunes a viernes, 8:00 a 12:00\",\n  \"competencias\": [\n    \"Docker\",\n    \"Linux\",\n    \"Integración continua\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Publicar segunda plaza (para rechazo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('plazaRechazoId', pm.response.json().plaza.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Practicante de Soporte\",\n  \"descripcion\": \"Automatización de despliegues, monitoreo de servicios y soporte al equipo de desarrollo.\",\n  \"area\": \"Infraestructura\",\n  \"modalidad\": \"REMOTA\",\n  \"ubicacion\": \"Managua\",\n  \"cupos\": 1,\n  \"horario\": \"Lunes a viernes, 8:00 a 12:00\",\n  \"competencias\": [\n    \"Docker\",\n    \"Linux\",\n    \"Integración continua\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estudiante no puede publicar plazas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Plaza no permitida\",\n  \"descripcion\": \"Automatización de despliegues, monitoreo de servicios y soporte al equipo de desarrollo.\",\n  \"area\": \"Infraestructura\",\n  \"modalidad\": \"REMOTA\",\n  \"ubicacion\": \"Managua\",\n  \"cupos\": 1,\n  \"horario\": \"Lunes a viernes, 8:00 a 12:00\",\n  \"competencias\": [\n    \"Docker\",\n    \"Linux\",\n    \"Integración continua\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estudiante no ve una plaza en revisión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaNuevaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaNuevaId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Plazas en revisión (coordinación)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye la plaza publicada', () => pm.expect(pm.response.json().data.map((p) => p.id)).to.include(pm.environment.get('plazaNuevaId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas?estado=EN_REVISION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "EN_REVISION"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobar plaza",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const plaza = pm.response.json().plaza;",
+                  "pm.test('Queda aprobada y publicada', () => {",
+                  "  pm.expect(plaza.estado).to.eql('APROBADA');",
+                  "  pm.expect(plaza.publicadaEn).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaNuevaId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaNuevaId}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobar dos veces es un conflicto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaNuevaId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaNuevaId}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rechazar plaza con motivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Queda rechazada con motivo', () => pm.expect(pm.response.json().plaza.motivoRechazo).to.include('actividades'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Detalla las actividades semanales y su relación con la carrera.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaRechazoId}}/rechazar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaRechazoId}}",
+                "rechazar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Corregir la plaza rechazada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Vuelve a revisión sin motivo de rechazo', () => {",
+                  "  const plaza = pm.response.json().plaza;",
+                  "  pm.expect(plaza.estado).to.eql('EN_REVISION');",
+                  "  pm.expect(plaza.motivoRechazo).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Practicante de Soporte Técnico\",\n  \"descripcion\": \"Semanas 1 a 4: inventario de equipos. Semanas 5 a 12: mesa de ayuda y documentación de incidencias.\",\n  \"area\": \"Infraestructura\",\n  \"modalidad\": \"REMOTA\",\n  \"ubicacion\": \"Managua\",\n  \"cupos\": 1,\n  \"horario\": \"Lunes a viernes, 8:00 a 12:00\",\n  \"competencias\": [\n    \"Docker\",\n    \"Linux\",\n    \"Integración continua\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaRechazoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaRechazoId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Plazas de mi organización",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye plazas en distintos estados', () => {",
+                  "  const estados = pm.response.json().data.map((p) => p.estado);",
+                  "  pm.expect(estados).to.include('APROBADA');",
+                  "  pm.expect(estados).to.include('EN_REVISION');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOrganizacion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/mias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "mias"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Detalle de plaza aprobada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Calcula los cupos disponibles', () => pm.expect(pm.response.json().plaza.cuposDisponibles).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plazas/{{plazaNuevaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plazas",
+                "{{plazaNuevaId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. API pública (RF-26)",
+      "description": "Consulta abierta para sistemas externos: sin token y con CORS abierto.",
+      "item": [
+        {
+          "name": "Plazas vigentes sin autenticación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CORS abierto a cualquier origen', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql('*'));",
+                  "pm.test('No expone datos internos', () => pm.response.json().data.forEach((p) => {",
+                  "  pm.expect(p).to.not.have.property('estado');",
+                  "  pm.expect(p).to.not.have.property('motivoRechazo');",
+                  "}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/publico/plazas?modalidad=REMOTA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "publico",
+                "plazas"
+              ],
+              "query": [
+                {
+                  "key": "modalidad",
+                  "value": "REMOTA"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Asignaciones (RF-13, RF-24)",
+      "description": "La coordinación confirma la asignación de una postulación preseleccionada (RN-02, RN-05, RN-06).",
+      "item": [
+        {
+          "name": "Candidatos preseleccionados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const candidato = pm.response.json().candidatos.find((c) => c.estudiante.usuario.correo === pm.environment.get('correoEstudiante'));",
+                  "pm.test('El estudiante del seed está preseleccionado', () => pm.expect(candidato).to.exist);",
+                  "pm.environment.set('postulacionId', candidato.id);",
+                  "const tutor = candidato.tutoresEmpresariales.find((t) => t.usuario.nombres.startsWith('Pedro'));",
+                  "pm.environment.set('tutorEmpresarialId', tutor.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/candidatos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "candidatos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Docentes con su carga (RN-06)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const docente = pm.response.json().docentes.find((d) => d.usuario.correo === pm.environment.get('correoDocente'));",
+                  "pm.test('El docente tiene cupo disponible', () => pm.expect(docente.cupoDisponible).to.be.above(0));",
+                  "pm.environment.set('docenteId', docente.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/docentes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "docentes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar asignación y designar tutor académico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "const asignacion = pm.response.json().asignacion;",
+                  "pm.test('Queda asignada', () => pm.expect(asignacion.estado).to.eql('ASIGNADA'));",
+                  "pm.test('Tiene la línea de tiempo de 6 hitos', () => pm.expect(asignacion.hitos).to.have.lengthOf(6));",
+                  "pm.environment.set('asignacionId', asignacion.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postulacionId\": \"{{postulacionId}}\",\n  \"docenteId\": \"{{docenteId}}\",\n  \"tutorEmpresarialId\": \"{{tutorEmpresarialId}}\",\n  \"fechaInicio\": \"2026-10-19\",\n  \"fechaFin\": \"2026-12-11\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "La misma postulación no se asigna dos veces",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postulacionId\": \"{{postulacionId}}\",\n  \"docenteId\": \"{{docenteId}}\",\n  \"tutorEmpresarialId\": \"{{tutorEmpresarialId}}\",\n  \"fechaInicio\": \"2026-10-19\",\n  \"fechaFin\": \"2026-12-11\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Expediente del estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es su asignación', () => pm.expect(pm.response.json().asignacion.id).to.eql(pm.environment.get('asignacionId')));",
+                  "pm.test('Su rol es ESTUDIANTE', () => pm.expect(pm.response.json().asignacion.miRol).to.eql('ESTUDIANTE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "actual"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Expediente visto por el tutor académico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Su rol es TUTOR_ACADEMICO', () => pm.expect(pm.response.json().asignacion.miRol).to.eql('TUTOR_ACADEMICO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDocente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/{{asignacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "{{asignacionId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Tutorados del docente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo ve sus tutorados', () => pm.response.json().data.forEach((a) => pm.expect(a.docente.usuario.correo).to.eql(pm.environment.get('correoDocente'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDocente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Plan de trabajo (RF-14, RF-15, RN-07)",
+      "description": "Elaboración del plan, observación de un tutor, nueva versión y aprobación de ambos tutores.",
+      "item": [
+        {
+          "name": "Crear plan de trabajo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+                  "const plan = pm.response.json().plan;",
+                  "pm.test('Queda en borrador', () => pm.expect(plan.estado).to.eql('BORRADOR'));",
+                  "pm.test('Calcula las horas previstas', () => pm.expect(plan.horasPrevistas).to.eql(240));",
+                  "pm.environment.set('planId', plan.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objetivos\": \"Desarrollar y documentar el módulo de inventario de la aplicación web aplicando buenas prácticas de ingeniería de software.\",\n  \"actividades\": [\n    {\n      \"descripcion\": \"Levantamiento de requisitos con el área de operaciones\",\n      \"semanaInicio\": 1,\n      \"semanaFin\": 2,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Diseño de la base de datos y de la API\",\n      \"semanaInicio\": 3,\n      \"semanaFin\": 4,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Desarrollo del módulo de inventario\",\n      \"semanaInicio\": 5,\n      \"semanaFin\": 7,\n      \"horas\": 90\n    },\n    {\n      \"descripcion\": \"Pruebas, documentación técnica y capacitación\",\n      \"semanaInicio\": 8,\n      \"semanaFin\": 8,\n      \"horas\": 30\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/{{asignacionId}}/plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "{{asignacionId}}",
+                "plan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar a revisión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Queda en revisión con la versión 1', () => {",
+                  "  const plan = pm.response.json().plan;",
+                  "  pm.expect(plan.estado).to.eql('EN_REVISION');",
+                  "  pm.expect(plan.versiones).to.have.lengthOf(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/enviar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "enviar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "No se edita un plan en revisión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objetivos\": \"Desarrollar y documentar el módulo de inventario de la aplicación web aplicando buenas prácticas de ingeniería de software.\",\n  \"actividades\": [\n    {\n      \"descripcion\": \"Levantamiento de requisitos con el área de operaciones\",\n      \"semanaInicio\": 1,\n      \"semanaFin\": 2,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Diseño de la base de datos y de la API\",\n      \"semanaInicio\": 3,\n      \"semanaFin\": 4,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Desarrollo del módulo de inventario\",\n      \"semanaInicio\": 5,\n      \"semanaFin\": 7,\n      \"horas\": 90\n    },\n    {\n      \"descripcion\": \"Pruebas, documentación técnica y capacitación\",\n      \"semanaInicio\": 8,\n      \"semanaFin\": 8,\n      \"horas\": 30\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Tutor académico deja observaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Queda observado', () => pm.expect(pm.response.json().plan.estado).to.eql('OBSERVADO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDocente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observacion\": \"Asigna más horas a la etapa de pruebas y documentación.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/observar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "observar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Corregir el plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recalcula las horas', () => pm.expect(pm.response.json().plan.horasPrevistas).to.eql(260));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objetivos\": \"Desarrollar y documentar el módulo de inventario de la aplicación web aplicando buenas prácticas de ingeniería de software.\",\n  \"actividades\": [\n    {\n      \"descripcion\": \"Levantamiento de requisitos con el área de operaciones\",\n      \"semanaInicio\": 1,\n      \"semanaFin\": 2,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Diseño de la base de datos y de la API\",\n      \"semanaInicio\": 3,\n      \"semanaFin\": 4,\n      \"horas\": 60\n    },\n    {\n      \"descripcion\": \"Desarrollo del módulo de inventario\",\n      \"semanaInicio\": 5,\n      \"semanaFin\": 7,\n      \"horas\": 90\n    },\n    {\n      \"descripcion\": \"Pruebas, documentación técnica y capacitación\",\n      \"semanaInicio\": 8,\n      \"semanaFin\": 8,\n      \"horas\": 50\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reenviar (versión 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Crea la versión 2', () => pm.expect(pm.response.json().plan.version).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/enviar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "enviar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estudiante no puede aprobar su plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobación del tutor académico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Falta la otra aprobación', () => pm.expect(pm.response.json().plan.estado).to.eql('EN_REVISION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDocente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobación del tutor empresarial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Plan aprobado por ambos tutores (RN-07)', () => pm.expect(pm.response.json().plan.estado).to.eql('APROBADO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTutor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/planes-trabajo/{{planId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planes-trabajo",
+                "{{planId}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "La asignación pasa a EN_CURSO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const asignacion = pm.response.json().asignacion;",
+                  "pm.test('Estado EN_CURSO', () => pm.expect(asignacion.estado).to.eql('EN_CURSO'));",
+                  "pm.test('Hito del plan completado', () => pm.expect(asignacion.hitos.find((h) => h.clave === 'PLAN').estado).to.eql('COMPLETADO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEstudiante}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "actual"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de versiones del plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Conserva las dos versiones con la observación', () => {",
+                  "  const versiones = pm.response.json().plan.versiones;",
+                  "  pm.expect(versiones).to.have.lengthOf(2);",
+                  "  pm.expect(versiones[1].observacionDocente).to.include('pruebas');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTutor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/asignaciones/{{asignacionId}}/plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asignaciones",
+                "{{asignacionId}}",
+                "plan"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Auditoría (RNF-13)",
+      "description": "Bitácora de operaciones críticas, solo para administración.",
+      "item": [
+        {
+          "name": "Consultar auditoría del plan de trabajo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const registros = pm.response.json().data;",
+                  "pm.test('Registra cada paso del plan', () => pm.expect(registros.length).to.be.at.least(5));",
+                  "pm.test('Cada registro tiene usuario e IP', () => registros.forEach((r) => {",
+                  "  pm.expect(r.usuario).to.not.be.null;",
+                  "  pm.expect(r.ip).to.be.a('string');",
+                  "}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auditoria?entidad=PlanTrabajo&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "entidad",
+                  "value": "PlanTrabajo"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Coordinación no puede consultar la auditoría",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCoordinador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auditoria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auditoria"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

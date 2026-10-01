@@ -1,0 +1,5147 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SIGEPP API",
+    "version": "1.0.0",
+    "description": "API REST del **Sistema de Gestión del Ejercicio y Prácticas Profesionales (SIGEPP)**.\n\n- Todas las rutas cuelgan de `/api/v1` y usan JSON en UTF-8; las fechas van en ISO 8601.\n- Autenticación con `Authorization: Bearer <token>` (botón **Authorize**). El token se obtiene en `POST /auth/login`.\n- Los listados se paginan con `page` y `limit` y devuelven un objeto `meta` con enlaces a la página siguiente y anterior.\n- Los errores siguen el formato `{ error: { codigo, mensaje, detalles[] } }`."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api/v1",
+      "description": "Desarrollo local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticación",
+      "description": "Registro, inicio de sesión y manejo de la sesión"
+    },
+    {
+      "name": "Organizaciones",
+      "description": "Organizaciones receptoras y sus tutores empresariales"
+    },
+    {
+      "name": "Plazas",
+      "description": "Bolsa de plazas de prácticas y su aprobación académica"
+    },
+    {
+      "name": "Asignaciones",
+      "description": "Asignación de estudiantes y expediente de prácticas"
+    },
+    {
+      "name": "Plan de trabajo",
+      "description": "Elaboración, versiones y aprobación del plan"
+    },
+    {
+      "name": "API pública",
+      "description": "Consulta abierta para sistemas externos (RF-26)"
+    },
+    {
+      "name": "Auditoría",
+      "description": "Bitácora inmutable de operaciones críticas"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token de acceso obtenido en POST /auth/login (vigencia de 15 minutos)."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string",
+                "example": "VALIDACION"
+              },
+              "mensaje": {
+                "type": "string",
+                "example": "Los datos enviados no son válidos"
+              },
+              "detalles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "correo: Correo no válido"
+                ]
+              }
+            },
+            "required": [
+              "codigo",
+              "mensaje",
+              "detalles"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "MetaPaginacion": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 42
+          },
+          "pagina": {
+            "type": "integer",
+            "example": 1
+          },
+          "limite": {
+            "type": "integer",
+            "example": 10
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "example": 5
+          },
+          "siguiente": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "/api/v1/plazas?page=2&limit=10"
+          },
+          "anterior": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "limite",
+          "totalPaginas",
+          "siguiente",
+          "anterior"
+        ]
+      },
+      "TutorEmpresarial": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombres": {
+                "type": "string"
+              },
+              "apellidos": {
+                "type": "string"
+              },
+              "correo": {
+                "type": "string"
+              },
+              "telefono": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "estado": {
+                "type": "string",
+                "enum": [
+                  "ACTIVO",
+                  "INACTIVO"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "nombres",
+              "apellidos",
+              "correo",
+              "telefono",
+              "estado"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "cargo",
+          "activo",
+          "usuario"
+        ]
+      },
+      "Organizacion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "razonSocial": {
+            "type": "string"
+          },
+          "ruc": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "sitioWeb": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estadoVerificacion": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "VERIFICADA",
+              "RECHAZADA"
+            ]
+          },
+          "convenioVigenteHasta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "representante": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombres": {
+                "type": "string"
+              },
+              "apellidos": {
+                "type": "string"
+              },
+              "correo": {
+                "type": "string"
+              },
+              "telefono": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "nombres",
+              "apellidos",
+              "correo",
+              "telefono"
+            ]
+          },
+          "_count": {
+            "type": "object",
+            "properties": {
+              "plazas": {
+                "type": "integer"
+              },
+              "tutoresEmpresariales": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "plazas",
+              "tutoresEmpresariales"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "razonSocial",
+          "ruc",
+          "sector",
+          "direccion",
+          "sitioWeb",
+          "estadoVerificacion",
+          "convenioVigenteHasta",
+          "creadaEn",
+          "representante",
+          "_count"
+        ]
+      },
+      "Plaza": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Desarrollador Web Jr."
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string",
+            "example": "Desarrollo de software"
+          },
+          "modalidad": {
+            "type": "string",
+            "enum": [
+              "PRESENCIAL",
+              "REMOTA",
+              "HIBRIDA"
+            ]
+          },
+          "ubicacion": {
+            "type": "string",
+            "example": "Managua"
+          },
+          "cupos": {
+            "type": "integer"
+          },
+          "cuposOcupados": {
+            "type": "integer"
+          },
+          "cuposDisponibles": {
+            "type": "integer"
+          },
+          "horario": {
+            "type": "string"
+          },
+          "competencias": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "EN_REVISION",
+              "APROBADA",
+              "RECHAZADA",
+              "CERRADA"
+            ]
+          },
+          "motivoRechazo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publicadaEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalPostulaciones": {
+            "type": "integer"
+          },
+          "organizacion": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "razonSocial": {
+                "type": "string"
+              },
+              "sector": {
+                "type": "string"
+              },
+              "sitioWeb": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "direccion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "razonSocial",
+              "sector",
+              "sitioWeb",
+              "direccion"
+            ]
+          },
+          "periodo": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombre": {
+                "type": "string",
+                "example": "II Semestre 2026"
+              }
+            },
+            "required": [
+              "id",
+              "nombre"
+            ]
+          },
+          "aprobadaPor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombres": {
+                "type": "string"
+              },
+              "apellidos": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombres",
+              "apellidos"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "descripcion",
+          "area",
+          "modalidad",
+          "ubicacion",
+          "cupos",
+          "cuposOcupados",
+          "cuposDisponibles",
+          "horario",
+          "competencias",
+          "estado",
+          "motivoRechazo",
+          "publicadaEn",
+          "creadaEn",
+          "actualizadaEn",
+          "totalPostulaciones",
+          "organizacion",
+          "periodo",
+          "aprobadaPor"
+        ]
+      },
+      "PlazaPublica": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Desarrollador Web Jr."
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "modalidad": {
+            "type": "string",
+            "enum": [
+              "PRESENCIAL",
+              "REMOTA",
+              "HIBRIDA"
+            ]
+          },
+          "ubicacion": {
+            "type": "string"
+          },
+          "cuposDisponibles": {
+            "type": "integer"
+          },
+          "horario": {
+            "type": "string"
+          },
+          "competencias": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publicadaEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "periodo": {
+            "type": "string",
+            "example": "II Semestre 2026"
+          },
+          "organizacion": {
+            "type": "object",
+            "properties": {
+              "razonSocial": {
+                "type": "string"
+              },
+              "sector": {
+                "type": "string"
+              },
+              "sitioWeb": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "razonSocial",
+              "sector",
+              "sitioWeb"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "descripcion",
+          "area",
+          "modalidad",
+          "ubicacion",
+          "cuposDisponibles",
+          "horario",
+          "competencias",
+          "publicadaEn",
+          "periodo",
+          "organizacion"
+        ]
+      },
+      "Asignacion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ASIGNADA",
+              "EN_CURSO",
+              "FINALIZADA",
+              "CANCELADA"
+            ]
+          },
+          "fechaInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaFin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "horasAcumuladas": {
+            "type": "integer"
+          },
+          "notaFinal": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estudiante": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "carnet": {
+                "type": "string"
+              },
+              "carrera": {
+                "type": "string"
+              },
+              "usuarioId": {
+                "type": "string"
+              },
+              "usuario": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "nombres": {
+                    "type": "string"
+                  },
+                  "apellidos": {
+                    "type": "string"
+                  },
+                  "correo": {
+                    "type": "string"
+                  },
+                  "telefono": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "nombres",
+                  "apellidos",
+                  "correo",
+                  "telefono"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "carnet",
+              "carrera",
+              "usuarioId",
+              "usuario"
+            ]
+          },
+          "plaza": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "titulo": {
+                "type": "string"
+              },
+              "area": {
+                "type": "string"
+              },
+              "modalidad": {
+                "type": "string"
+              },
+              "ubicacion": {
+                "type": "string"
+              },
+              "horario": {
+                "type": "string"
+              },
+              "organizacion": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "razonSocial": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "razonSocial"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "titulo",
+              "area",
+              "modalidad",
+              "ubicacion",
+              "horario",
+              "organizacion"
+            ]
+          },
+          "docente": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "departamento": {
+                "type": "string"
+              },
+              "usuarioId": {
+                "type": "string"
+              },
+              "usuario": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "nombres": {
+                    "type": "string"
+                  },
+                  "apellidos": {
+                    "type": "string"
+                  },
+                  "correo": {
+                    "type": "string"
+                  },
+                  "telefono": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "nombres",
+                  "apellidos",
+                  "correo",
+                  "telefono"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "departamento",
+              "usuarioId",
+              "usuario"
+            ]
+          },
+          "tutorEmpresarial": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "cargo": {
+                "type": "string"
+              },
+              "usuarioId": {
+                "type": "string"
+              },
+              "usuario": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "nombres": {
+                    "type": "string"
+                  },
+                  "apellidos": {
+                    "type": "string"
+                  },
+                  "correo": {
+                    "type": "string"
+                  },
+                  "telefono": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "nombres",
+                  "apellidos",
+                  "correo",
+                  "telefono"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "cargo",
+              "usuarioId",
+              "usuario"
+            ]
+          },
+          "periodo": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "horasMinimas": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "horasMinimas"
+            ]
+          },
+          "planTrabajo": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              },
+              "estado": {
+                "type": "string"
+              },
+              "horasPrevistas": {
+                "type": "integer"
+              },
+              "aprobadoDocenteEn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "aprobadoEmpresaEn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "version",
+              "estado",
+              "horasPrevistas",
+              "aprobadoDocenteEn",
+              "aprobadoEmpresaEn"
+            ]
+          },
+          "totalBitacoras": {
+            "type": "integer"
+          },
+          "progreso": {
+            "type": "object",
+            "properties": {
+              "horasAcumuladas": {
+                "type": "integer"
+              },
+              "horasMinimas": {
+                "type": "integer"
+              },
+              "porcentaje": {
+                "type": "integer",
+                "example": 35
+              }
+            },
+            "required": [
+              "horasAcumuladas",
+              "horasMinimas",
+              "porcentaje"
+            ]
+          },
+          "hitos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "titulo": {
+                  "type": "string"
+                },
+                "estado": {
+                  "type": "string",
+                  "enum": [
+                    "COMPLETADO",
+                    "EN_CURSO",
+                    "PENDIENTE"
+                  ]
+                }
+              },
+              "required": [
+                "clave",
+                "titulo",
+                "estado"
+              ]
+            },
+            "description": "Línea de tiempo del trámite (RF-24)"
+          },
+          "miRol": {
+            "type": "string",
+            "enum": [
+              "ESTUDIANTE",
+              "TUTOR_ACADEMICO",
+              "TUTOR_EMPRESARIAL",
+              "SUPERVISOR"
+            ],
+            "description": "Papel del usuario autenticado dentro de la asignación"
+          }
+        },
+        "required": [
+          "id",
+          "estado",
+          "fechaInicio",
+          "fechaFin",
+          "horasAcumuladas",
+          "notaFinal",
+          "creadaEn",
+          "estudiante",
+          "plaza",
+          "docente",
+          "tutorEmpresarial",
+          "periodo",
+          "planTrabajo",
+          "totalBitacoras",
+          "progreso",
+          "hitos"
+        ]
+      },
+      "ActividadPlan": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300,
+            "example": "Levantamiento de requisitos del módulo de inventario"
+          },
+          "semanaInicio": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 26,
+            "example": 1
+          },
+          "semanaFin": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 26,
+            "example": 2
+          },
+          "horas": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "example": 40
+          }
+        },
+        "required": [
+          "descripcion",
+          "semanaInicio",
+          "semanaFin",
+          "horas"
+        ]
+      },
+      "PlanTrabajo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "asignacionId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "objetivos": {
+            "type": "string"
+          },
+          "actividades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActividadPlan"
+            }
+          },
+          "horasPrevistas": {
+            "type": "integer",
+            "description": "Suma de las horas de las actividades"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_REVISION",
+              "OBSERVADO",
+              "APROBADO"
+            ]
+          },
+          "aprobadoDocenteEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "aprobadoEmpresaEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "actualizadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versiones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer"
+                },
+                "objetivos": {
+                  "type": "string"
+                },
+                "actividades": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActividadPlan"
+                  }
+                },
+                "horasPrevistas": {
+                  "type": "integer"
+                },
+                "observacionDocente": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "observacionEmpresa": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "creadaEn": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "version",
+                "objetivos",
+                "actividades",
+                "horasPrevistas",
+                "observacionDocente",
+                "observacionEmpresa",
+                "creadaEn"
+              ]
+            },
+            "description": "Historial de versiones enviadas a revisión, de la más reciente a la más antigua"
+          }
+        },
+        "required": [
+          "id",
+          "asignacionId",
+          "version",
+          "objetivos",
+          "actividades",
+          "horasPrevistas",
+          "estado",
+          "aprobadoDocenteEn",
+          "aprobadoEmpresaEn",
+          "actualizadoEn",
+          "versiones"
+        ]
+      },
+      "RegistroAuditoria": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "usuarioId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entidad": {
+            "type": "string",
+            "example": "Plaza"
+          },
+          "entidadId": {
+            "type": "string"
+          },
+          "accion": {
+            "type": "string",
+            "example": "APROBAR"
+          },
+          "valoresAnteriores": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "example": {
+              "estado": "EN_REVISION"
+            }
+          },
+          "valoresNuevos": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "example": {
+              "estado": "APROBADA"
+            }
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "::1"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usuario": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nombres": {
+                "type": "string"
+              },
+              "apellidos": {
+                "type": "string"
+              },
+              "rol": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombres",
+              "apellidos",
+              "rol"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "usuarioId",
+          "entidad",
+          "entidadId",
+          "accion",
+          "valoresAnteriores",
+          "valoresNuevos",
+          "ip",
+          "creadaEn",
+          "usuario"
+        ]
+      },
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "cmuppsesc000l149zydwil4e7"
+          },
+          "nombres": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "ESTUDIANTE",
+              "TUTOR_ACADEMICO",
+              "TUTOR_EMPRESARIAL",
+              "ORGANIZACION",
+              "COORDINADOR",
+              "ADMIN"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ACTIVO",
+              "INACTIVO"
+            ]
+          },
+          "telefono": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estudiante": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "carnet": {
+                "type": "string"
+              },
+              "carrera": {
+                "type": "string"
+              },
+              "anio": {
+                "type": "integer"
+              },
+              "porcentajeAvance": {
+                "type": "string",
+                "example": "92"
+              },
+              "avanceVerificado": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "carnet",
+              "carrera",
+              "anio",
+              "porcentajeAvance",
+              "avanceVerificado"
+            ]
+          },
+          "docente": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "departamento": {
+                "type": "string"
+              },
+              "especialidad": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "departamento",
+              "especialidad"
+            ]
+          },
+          "tutorEmpresarial": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "organizacionId": {
+                "type": "string"
+              },
+              "cargo": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "organizacionId",
+              "cargo"
+            ]
+          },
+          "organizacion": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "razonSocial": {
+                "type": "string"
+              },
+              "estadoVerificacion": {
+                "type": "string",
+                "enum": [
+                  "PENDIENTE",
+                  "VERIFICADA",
+                  "RECHAZADA"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "razonSocial",
+              "estadoVerificacion"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nombres",
+          "apellidos",
+          "correo",
+          "rol",
+          "estado",
+          "telefono",
+          "creadoEn",
+          "estudiante",
+          "docente",
+          "tutorEmpresarial",
+          "organizacion"
+        ]
+      },
+      "RegistroEstudiante": {
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": "string",
+            "enum": [
+              "ESTUDIANTE"
+            ]
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Ana Lucía"
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Pérez Gómez"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "ana.perez@std.uni.edu.ni"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "[A-Za-z]",
+            "example": "Segura2026"
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s-]{8,15}$",
+            "example": "+505 8888 0000"
+          },
+          "carnet": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{4}[A-Z]$",
+            "example": "2022-0802U"
+          },
+          "carrera": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "example": "Ingeniería en Sistemas"
+          },
+          "anio": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          }
+        },
+        "required": [
+          "rol",
+          "nombres",
+          "apellidos",
+          "correo",
+          "contrasena",
+          "carnet",
+          "carrera",
+          "anio"
+        ]
+      },
+      "RegistroDocente": {
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": "string",
+            "enum": [
+              "TUTOR_ACADEMICO"
+            ]
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Ana Lucía"
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Pérez Gómez"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "docente@uni.edu.ni"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "[A-Za-z]",
+            "example": "Segura2026"
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s-]{8,15}$",
+            "example": "+505 8888 0000"
+          },
+          "departamento": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "example": "Ingeniería en Sistemas"
+          },
+          "especialidad": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Bases de Datos"
+          }
+        },
+        "required": [
+          "rol",
+          "nombres",
+          "apellidos",
+          "correo",
+          "contrasena",
+          "departamento"
+        ]
+      },
+      "Registro": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RegistroEstudiante"
+          },
+          {
+            "$ref": "#/components/schemas/RegistroDocente"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "rol",
+          "mapping": {
+            "ESTUDIANTE": "#/components/schemas/RegistroEstudiante",
+            "TUTOR_ACADEMICO": "#/components/schemas/RegistroDocente"
+          }
+        }
+      },
+      "Sesion": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        },
+        "required": [
+          "accessToken",
+          "usuario"
+        ]
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "maria.gonzalez@std.uni.edu.ni"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 72,
+            "example": "Sigepp2026"
+          }
+        },
+        "required": [
+          "correo",
+          "contrasena"
+        ]
+      },
+      "RepresentanteOrganizacion": {
+        "type": "object",
+        "properties": {
+          "nombres": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Ana Lucía"
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Pérez Gómez"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "rrhh@empresa.com.ni"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "[A-Za-z]",
+            "example": "Segura2026"
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s-]{8,15}$",
+            "example": "+505 8888 0000"
+          }
+        },
+        "required": [
+          "nombres",
+          "apellidos",
+          "correo",
+          "contrasena"
+        ]
+      },
+      "RegistroOrganizacion": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 150,
+            "example": "Soluciones Digitales del Pacífico, S.A."
+          },
+          "ruc": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]{14}$",
+            "example": "J0310000000001"
+          },
+          "sector": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 80,
+            "example": "Tecnología"
+          },
+          "direccion": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 250,
+            "example": "Managua, Carretera a Masaya km 5"
+          },
+          "sitioWeb": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com"
+          },
+          "representante": {
+            "$ref": "#/components/schemas/RepresentanteOrganizacion"
+          }
+        },
+        "required": [
+          "razonSocial",
+          "ruc",
+          "sector",
+          "direccion",
+          "representante"
+        ]
+      },
+      "VerificarOrganizacion": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "VERIFICADA",
+              "RECHAZADA"
+            ]
+          },
+          "convenioVigenteHasta": {
+            "type": "string",
+            "format": "date",
+            "example": "2027-12-31"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "CrearTutorEmpresarial": {
+        "type": "object",
+        "properties": {
+          "nombres": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Ana Lucía"
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Pérez Gómez"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "tutor@empresa.com.ni"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "[A-Za-z]",
+            "example": "Segura2026"
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s-]{8,15}$",
+            "example": "+505 8888 0000"
+          },
+          "cargo": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Líder de desarrollo"
+          }
+        },
+        "required": [
+          "nombres",
+          "apellidos",
+          "correo",
+          "contrasena",
+          "cargo"
+        ]
+      },
+      "ActualizarTutorEmpresarial": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean",
+            "description": "false da de baja al tutor"
+          }
+        },
+        "required": [
+          "activo"
+        ]
+      },
+      "CrearPlaza": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 120,
+            "example": "Desarrollador Web Jr."
+          },
+          "descripcion": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 3000,
+            "example": "Apoyo en el desarrollo de una aplicación web con React y Node.js."
+          },
+          "area": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 80,
+            "example": "Desarrollo de software"
+          },
+          "modalidad": {
+            "type": "string",
+            "enum": [
+              "PRESENCIAL",
+              "REMOTA",
+              "HIBRIDA"
+            ]
+          },
+          "ubicacion": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Managua"
+          },
+          "cupos": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 2
+          },
+          "horario": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120,
+            "example": "Lunes a viernes, 8:00 a 12:00"
+          },
+          "competencias": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "minItems": 1,
+            "maxItems": 15,
+            "example": [
+              "JavaScript",
+              "React",
+              "Git"
+            ]
+          },
+          "organizacionId": {
+            "type": "string",
+            "description": "Solo para el administrador; la organización publica siempre a su nombre."
+          }
+        },
+        "required": [
+          "titulo",
+          "descripcion",
+          "area",
+          "modalidad",
+          "ubicacion",
+          "cupos",
+          "horario",
+          "competencias"
+        ]
+      },
+      "ActualizarPlaza": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 120,
+            "example": "Desarrollador Web Jr."
+          },
+          "descripcion": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 3000,
+            "example": "Apoyo en el desarrollo de una aplicación web con React y Node.js."
+          },
+          "area": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 80,
+            "example": "Desarrollo de software"
+          },
+          "modalidad": {
+            "type": "string",
+            "enum": [
+              "PRESENCIAL",
+              "REMOTA",
+              "HIBRIDA"
+            ]
+          },
+          "ubicacion": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "Managua"
+          },
+          "cupos": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 2
+          },
+          "horario": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120,
+            "example": "Lunes a viernes, 8:00 a 12:00"
+          },
+          "competencias": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "minItems": 1,
+            "maxItems": 15,
+            "example": [
+              "JavaScript",
+              "React",
+              "Git"
+            ]
+          }
+        },
+        "required": [
+          "titulo",
+          "descripcion",
+          "area",
+          "modalidad",
+          "ubicacion",
+          "cupos",
+          "horario",
+          "competencias"
+        ]
+      },
+      "RechazarPlaza": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500,
+            "example": "Las actividades no corresponden al perfil de Ingeniería en Sistemas."
+          }
+        },
+        "required": [
+          "motivo"
+        ]
+      },
+      "CrearAsignacion": {
+        "type": "object",
+        "properties": {
+          "postulacionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postulación PRESELECCIONADA por la empresa"
+          },
+          "docenteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Docente que será el tutor académico"
+          },
+          "tutorEmpresarialId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tutor empresarial activo de la organización de la plaza"
+          },
+          "fechaInicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-10-19"
+          },
+          "fechaFin": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-11"
+          }
+        },
+        "required": [
+          "postulacionId",
+          "docenteId",
+          "tutorEmpresarialId",
+          "fechaInicio",
+          "fechaFin"
+        ]
+      },
+      "PlanTrabajoEntrada": {
+        "type": "object",
+        "properties": {
+          "objetivos": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 2000,
+            "example": "Desarrollar el módulo de inventario de la aplicación web aplicando buenas prácticas de ingeniería de software."
+          },
+          "actividades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActividadPlan"
+            },
+            "minItems": 1,
+            "maxItems": 30
+          }
+        },
+        "required": [
+          "objetivos",
+          "actividades"
+        ]
+      },
+      "ObservarPlan": {
+        "type": "object",
+        "properties": {
+          "observacion": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "example": "Detalla las horas de la actividad de pruebas y agrega la documentación técnica."
+          }
+        },
+        "required": [
+          "observacion"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/auth/registro": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Registrar estudiante o docente (RF-01)",
+        "description": "Registro abierto para estudiantes y tutores académicos. El correo debe pertenecer al dominio institucional.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Registro"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/Usuario"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión (RF-02)",
+        "description": "Devuelve el token de acceso (15 min) y fija la cookie de refresco. Tras 5 intentos fallidos la cuenta se bloquea temporalmente (RNF-08).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión iniciada",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie HttpOnly `sigepp_rt` con el token de refresco (7 días, SameSite=Strict).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sesion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Renovar el token de acceso",
+        "description": "Usa la cookie `sigepp_rt`. El token de refresco se rota en cada uso; reutilizar uno anterior cierra todas las sesiones.",
+        "responses": {
+          "200": {
+            "description": "Sesión renovada",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie HttpOnly `sigepp_rt` con el token de refresco (7 días, SameSite=Strict).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sesion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Cerrar sesión",
+        "responses": {
+          "204": {
+            "description": "Sesión cerrada"
+          }
+        }
+      }
+    },
+    "/auth/yo": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Usuario autenticado",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario de la sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/Usuario"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones": {
+      "post": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Registrar organización receptora (RF-05)",
+        "description": "Registro público. Crea la organización en estado PENDIENTE y la cuenta de su representante; la coordinación debe verificarla antes de que pueda publicar plazas (RN-12).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroOrganizacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organización registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizacion": {
+                      "$ref": "#/components/schemas/Organizacion"
+                    }
+                  },
+                  "required": [
+                    "organizacion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Listar organizaciones",
+        "description": "Coordinación y administración. Permite filtrar por estado de verificación.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDIENTE",
+                "VERIFICADA",
+                "RECHAZADA"
+              ]
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Busca por razón social o RUC"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Organizacion"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones/mia": {
+      "get": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Organización del representante autenticado",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organización con sus tutores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizacion": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/Organizacion"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "tutoresEmpresariales": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/TutorEmpresarial"
+                              }
+                            }
+                          },
+                          "required": [
+                            "tutoresEmpresariales"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "organizacion"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones/{id}": {
+      "get": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Detalle de una organización",
+        "description": "Coordinación, administración o el representante de la propia organización.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppserf0000149zl9zbw8h1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organización con sus tutores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizacion": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/Organizacion"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "tutoresEmpresariales": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/TutorEmpresarial"
+                              }
+                            }
+                          },
+                          "required": [
+                            "tutoresEmpresariales"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "organizacion"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones/{id}/verificar": {
+      "patch": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Verificar o rechazar una organización (RF-06)",
+        "description": "Registra el resultado de la verificación y la vigencia del convenio. Queda en la bitácora de auditoría y notifica al representante.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppserf0000149zl9zbw8h1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarOrganizacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizacion": {
+                      "$ref": "#/components/schemas/Organizacion"
+                    }
+                  },
+                  "required": [
+                    "organizacion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones/{id}/tutores": {
+      "get": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Listar tutores empresariales",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppserf0000149zl9zbw8h1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tutores de la organización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tutores": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TutorEmpresarial"
+                      }
+                    }
+                  },
+                  "required": [
+                    "tutores"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Dar de alta un tutor empresarial (RF-07)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppserf0000149zl9zbw8h1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTutorEmpresarial"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tutor creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tutor": {
+                      "$ref": "#/components/schemas/TutorEmpresarial"
+                    }
+                  },
+                  "required": [
+                    "tutor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizaciones/{id}/tutores/{tutorId}": {
+      "patch": {
+        "tags": [
+          "Organizaciones"
+        ],
+        "summary": "Dar de baja o reactivar un tutor empresarial (RF-07)",
+        "description": "No se permite dar de baja a un tutor con asignaciones activas (409).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppserf0000149zl9zbw8h1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "tutorId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTutorEmpresarial"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tutor actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tutor": {
+                      "$ref": "#/components/schemas/TutorEmpresarial"
+                    }
+                  },
+                  "required": [
+                    "tutor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas": {
+      "get": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Buscar plazas (RF-10)",
+        "description": "Búsqueda por texto, filtros, orden y paginación sobre el período activo. Los estudiantes y demás roles solo reciben plazas APROBADAS (RN-04); coordinación y administración pueden filtrar por cualquier estado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Texto en título, descripción o área"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "area",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRESENCIAL",
+                "REMOTA",
+                "HIBRIDA"
+              ]
+            },
+            "required": false,
+            "name": "modalidad",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "ubicacion",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "organizacionId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EN_REVISION",
+                "APROBADA",
+                "RECHAZADA",
+                "CERRADA"
+              ],
+              "description": "Solo coordinación y administración; para los demás roles siempre es APROBADA."
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recientes",
+                "titulo",
+                "cupos"
+              ],
+              "default": "recientes"
+            },
+            "required": false,
+            "name": "orden",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Plaza"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Publicar una plaza (RF-08)",
+        "description": "Crea la plaza en estado EN_REVISION dentro del período activo. La organización debe estar verificada y con convenio vigente (RN-12), de lo contrario responde 422.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPlaza"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plaza creada en revisión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plaza": {
+                      "$ref": "#/components/schemas/Plaza"
+                    }
+                  },
+                  "required": [
+                    "plaza"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Se incumple una regla de negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas/filtros": {
+      "get": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Opciones para el panel de filtros",
+        "description": "Áreas, ubicaciones y organizaciones con plazas aprobadas en el período activo.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores disponibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "areas": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "ubicaciones": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "organizaciones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "razonSocial": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "razonSocial"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "areas",
+                    "ubicaciones",
+                    "organizaciones"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas/mias": {
+      "get": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Plazas de mi organización",
+        "description": "Todas las plazas de la organización del representante, en cualquier estado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EN_REVISION",
+                "APROBADA",
+                "RECHAZADA",
+                "CERRADA"
+              ]
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Plaza"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas/{id}": {
+      "get": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Detalle de una plaza",
+        "description": "Una plaza no aprobada solo es visible para coordinación, administración y la propia organización; para los demás responde 404.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppsesm000v149zrigypm7t"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plaza",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plaza": {
+                      "$ref": "#/components/schemas/Plaza"
+                    }
+                  },
+                  "required": [
+                    "plaza"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Corregir una plaza",
+        "description": "Solo plazas EN_REVISION o RECHAZADAS; la plaza vuelve a quedar EN_REVISION.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppsesm000v149zrigypm7t"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPlaza"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plaza actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plaza": {
+                      "$ref": "#/components/schemas/Plaza"
+                    }
+                  },
+                  "required": [
+                    "plaza"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Se incumple una regla de negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas/{id}/aprobar": {
+      "patch": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Aprobar y publicar una plaza (RF-09, RN-04)",
+        "description": "Solo plazas EN_REVISION (409 en otro caso). Queda en auditoría y notifica a la organización.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppsesm000v149zrigypm7t"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plaza aprobada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plaza": {
+                      "$ref": "#/components/schemas/Plaza"
+                    }
+                  },
+                  "required": [
+                    "plaza"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Se incumple una regla de negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plazas/{id}/rechazar": {
+      "patch": {
+        "tags": [
+          "Plazas"
+        ],
+        "summary": "Rechazar una plaza (RF-09)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuppsesm000v149zrigypm7t"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RechazarPlaza"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plaza rechazada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plaza": {
+                      "$ref": "#/components/schemas/Plaza"
+                    }
+                  },
+                  "required": [
+                    "plaza"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/publico/plazas": {
+      "get": {
+        "tags": [
+          "API pública"
+        ],
+        "summary": "Plazas vigentes para sistemas externos (RF-26)",
+        "description": "Endpoint público, sin autenticación y con CORS abierto. Devuelve solo las plazas aprobadas del período activo, sin datos internos. Límite: 60 peticiones por minuto por IP.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "area",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRESENCIAL",
+                "REMOTA",
+                "HIBRIDA"
+              ]
+            },
+            "required": false,
+            "name": "modalidad",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlazaPublica"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones": {
+      "get": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Listar asignaciones",
+        "description": "Cada rol recibe solo las asignaciones en las que participa (estudiante, tutor académico o empresarial); coordinación y administración ven todas.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ASIGNADA",
+                "EN_CURSO",
+                "FINALIZADA",
+                "CANCELADA"
+              ]
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Nombre, apellido o carnet del estudiante"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Asignacion"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Confirmar asignación y designar tutor académico (RF-13)",
+        "description": "Valida las reglas de negocio:\n- **RN-02**: el estudiante no puede tener otra asignación activa en el período (409).\n- **RN-05**: el tutor empresarial debe estar activo y pertenecer a la organización de la plaza (422).\n- **RN-06**: el docente no puede superar su máximo de tutorados (422).\n\nOcupa un cupo de la plaza, retira las demás postulaciones pendientes del estudiante y notifica a las tres partes.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAsignacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asignacion": {
+                      "$ref": "#/components/schemas/Asignacion"
+                    }
+                  },
+                  "required": [
+                    "asignacion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Se incumple una regla de negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones/candidatos": {
+      "get": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Postulaciones preseleccionadas pendientes de asignar",
+        "description": "Coordinación. Incluye los tutores empresariales activos de cada organización para elegir uno.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidatos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidatos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Id de la postulación"
+                          },
+                          "estudiante": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "carnet": {
+                                "type": "string"
+                              },
+                              "porcentajeAvance": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "carnet",
+                              "porcentajeAvance"
+                            ]
+                          },
+                          "plaza": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "titulo": {
+                                "type": "string"
+                              },
+                              "cuposDisponibles": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "titulo",
+                              "cuposDisponibles"
+                            ]
+                          },
+                          "tutoresEmpresariales": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "cargo": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "cargo"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "estudiante",
+                          "plaza",
+                          "tutoresEmpresariales"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "candidatos"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones/docentes": {
+      "get": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Docentes con su carga de tutorados (RN-06)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Docentes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "docentes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "departamento": {
+                            "type": "string"
+                          },
+                          "cupoMaximo": {
+                            "type": "integer"
+                          },
+                          "cupoOcupado": {
+                            "type": "integer"
+                          },
+                          "cupoDisponible": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "departamento",
+                          "cupoMaximo",
+                          "cupoOcupado",
+                          "cupoDisponible"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "docentes"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones/actual": {
+      "get": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Asignación activa del estudiante autenticado",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Expediente del estudiante",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asignacion": {
+                      "$ref": "#/components/schemas/Asignacion"
+                    }
+                  },
+                  "required": [
+                    "asignacion"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones/{id}": {
+      "get": {
+        "tags": [
+          "Asignaciones"
+        ],
+        "summary": "Expediente de una asignación",
+        "description": "Solo para las partes de la asignación y la coordinación; para cualquier otro usuario responde 404.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuq1asig0000149zabcd1234"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Expediente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asignacion": {
+                      "$ref": "#/components/schemas/Asignacion"
+                    }
+                  },
+                  "required": [
+                    "asignacion"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asignaciones/{id}/plan": {
+      "get": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Plan de trabajo de una asignación",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuq1asig0000149zabcd1234"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan con su historial de versiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Crear el plan de trabajo (RF-14)",
+        "description": "El estudiante de la asignación crea su plan en estado BORRADOR.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "cmuq1asig0000149zabcd1234"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanTrabajoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plan creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes-trabajo/{id}": {
+      "put": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Reemplazar el contenido del plan",
+        "description": "Solo en estado BORRADOR u OBSERVADO; un plan en revisión o aprobado no se puede editar (409).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanTrabajoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes-trabajo/{id}/enviar": {
+      "post": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Enviar el plan a revisión de los tutores",
+        "description": "Guarda la versión enviada en el historial. Las horas previstas deben alcanzar las horas mínimas del período (422).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan en revisión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Se incumple una regla de negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes-trabajo/{id}/aprobar": {
+      "patch": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Aprobar el plan (RF-15, RN-07)",
+        "description": "Cada tutor aprueba por separado. Con ambas aprobaciones el plan queda APROBADO y la asignación pasa a EN_CURSO, lo que habilita las bitácoras.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aprobación registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes-trabajo/{id}/observar": {
+      "patch": {
+        "tags": [
+          "Plan de trabajo"
+        ],
+        "summary": "Devolver el plan con observaciones (RF-15)",
+        "description": "La observación queda guardada en la versión revisada y el estudiante es notificado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservarPlan"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan observado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "$ref": "#/components/schemas/PlanTrabajo"
+                    }
+                  },
+                  "required": [
+                    "plan"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auditoria": {
+      "get": {
+        "tags": [
+          "Auditoría"
+        ],
+        "summary": "Consultar la bitácora de auditoría (RNF-13)",
+        "description": "Solo administración. Cada registro guarda usuario, IP, marca de tiempo y valores anterior y posterior; la tabla es inmutable a nivel de base de datos.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 50,
+              "example": "Plaza"
+            },
+            "required": false,
+            "name": "entidad",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 50
+            },
+            "required": false,
+            "name": "entidadId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 50
+            },
+            "required": false,
+            "name": "usuarioId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 50,
+              "example": "APROBAR"
+            },
+            "required": false,
+            "name": "accion",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-31"
+            },
+            "required": false,
+            "name": "hasta",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RegistroAuditoria"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacion"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol del usuario no tiene permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

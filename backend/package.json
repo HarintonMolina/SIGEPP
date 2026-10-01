@@ -20,7 +20,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "docs:openapi": "tsx scripts/exportar-openapi.ts",
+    "docs:diagramas": "tsx scripts/generar-diagramas.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
