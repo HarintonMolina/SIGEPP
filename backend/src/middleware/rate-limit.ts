@@ -18,10 +18,14 @@ export const limiteGeneral = rateLimit({
   message: respuesta('Demasiadas peticiones, intenta de nuevo en un minuto'),
 });
 
-/** Límite adicional para los endpoints de autenticación, contra fuerza bruta distribuida. */
+/**
+ * Límite adicional para los endpoints de autenticación, contra fuerza bruta distribuida.
+ * Solo cuentan los intentos fallidos: un usuario que inicia sesión correctamente no se bloquea.
+ */
 export const limiteAutenticacion = rateLimit({
   windowMs: 15 * 60_000,
   limit: 20,
+  skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: omitirEnPruebas,
