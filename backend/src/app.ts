@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { env, esProduccion } from './config/env.js';
 import { docsRouter } from './docs/openapi.js';
 import { asyncHandler } from './lib/async-handler.js';
+import { middlewareContexto } from './lib/contexto.js';
 import { prisma } from './lib/prisma.js';
 import { manejadorErrores, rutaNoEncontrada } from './middleware/error.js';
 import { limiteGeneral } from './middleware/rate-limit.js';
@@ -39,6 +40,8 @@ export const crearApp = () => {
   );
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
+  // Después de leer el cuerpo: los lectores de streams pierden el contexto asíncrono.
+  app.use(middlewareContexto);
   app.use('/api', limiteGeneral);
 
   app.get(

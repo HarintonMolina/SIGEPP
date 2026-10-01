@@ -103,6 +103,17 @@ La especificación se genera a partir de los mismos esquemas Zod que validan cad
 | PUT | `/api/v1/plazas/{id}` | Corregir una plaza en revisión o rechazada | Organización |
 | PATCH | `/api/v1/plazas/{id}/aprobar` · `/rechazar` | Revisión académica de la plaza | Coord., Admin. |
 | GET | `/api/v1/publico/plazas` | Plazas vigentes para sistemas externos | Público |
+| GET | `/api/v1/asignaciones/candidatos` | Postulaciones preseleccionadas por asignar | Coord. |
+| GET | `/api/v1/asignaciones/docentes` | Docentes con su carga de tutorados | Coord. |
+| POST | `/api/v1/asignaciones` | Confirmar asignación y designar tutor académico | Coord. |
+| GET | `/api/v1/asignaciones` | Asignaciones en las que participa el usuario | Partes, Coord. |
+| GET | `/api/v1/asignaciones/actual` | Expediente activo del estudiante | Estudiante |
+| GET | `/api/v1/asignaciones/{id}` | Expediente con línea de tiempo y progreso de horas | Partes, Coord. |
+| GET · POST | `/api/v1/asignaciones/{id}/plan` | Consultar o crear el plan de trabajo | Partes · Estudiante |
+| PUT | `/api/v1/planes-trabajo/{id}` | Editar el plan en borrador u observado | Estudiante |
+| POST | `/api/v1/planes-trabajo/{id}/enviar` | Enviar a revisión (guarda una versión) | Estudiante |
+| PATCH | `/api/v1/planes-trabajo/{id}/aprobar` · `/observar` | Revisión de cada tutor | Tutores |
+| GET | `/api/v1/auditoria` | Bitácora de auditoría con filtros | Admin. |
 
 Errores con formato uniforme:
 
