@@ -164,3 +164,40 @@ export const crearAsignacion = async (plaza: {
   });
   return { asignacion, estudiante, docente, tutor };
 };
+
+export const crearPostulacion = (
+  estudianteId: string,
+  plazaId: string,
+  estado:
+    'POSTULADA' | 'PRESELECCIONADA' | 'RECHAZADA' | 'RETIRADA' | 'ASIGNADA' = 'PRESELECCIONADA',
+) =>
+  prisma.postulacion.create({
+    data: {
+      estudianteId,
+      plazaId,
+      estado,
+      cartaMotivacion: 'Carta de motivación de prueba con la longitud suficiente.',
+    },
+  });
+
+/** Actividades de un plan de trabajo que suman 240 horas (el mínimo del período de prueba). */
+export const actividadesPlan = (horasPorActividad = 80) => [
+  {
+    descripcion: 'Levantamiento de requisitos',
+    semanaInicio: 1,
+    semanaFin: 3,
+    horas: horasPorActividad,
+  },
+  {
+    descripcion: 'Desarrollo del módulo asignado',
+    semanaInicio: 4,
+    semanaFin: 9,
+    horas: horasPorActividad,
+  },
+  {
+    descripcion: 'Pruebas y documentación',
+    semanaInicio: 10,
+    semanaFin: 12,
+    horas: horasPorActividad,
+  },
+];

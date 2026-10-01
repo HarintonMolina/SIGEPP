@@ -232,6 +232,31 @@ async function main() {
     ],
   });
 
+  // ─── Postulaciones de ejemplo ───
+  // María y Valeria quedan preseleccionadas para demostrar la asignación (RF-13);
+  // Carlos tiene una postulación pendiente de revisión por la empresa.
+  const plazaPorTitulo = (titulo: string) =>
+    prisma.plaza.findFirstOrThrow({ where: { titulo }, select: { id: true } });
+  const estudiantePorCorreo = (correo: string) =>
+    prisma.estudiante.findFirstOrThrow({ where: { usuario: { correo } }, select: { id: true } });
+
+  const postulaciones = [
+    ['maria.gonzalez@std.uni.edu.ni', 'Desarrollador Web Jr.', 'PRESELECCIONADA'],
+    ['valeria.flores@std.uni.edu.ni', 'Asistente de Inteligencia de Negocios', 'PRESELECCIONADA'],
+    ['carlos.ramirez@std.uni.edu.ni', 'Analista de Control de Calidad (QA)', 'POSTULADA'],
+  ] as const;
+  for (const [correo, titulo, estado] of postulaciones) {
+    await prisma.postulacion.create({
+      data: {
+        estudianteId: (await estudiantePorCorreo(correo)).id,
+        plazaId: (await plazaPorTitulo(titulo)).id,
+        estado,
+        cartaMotivacion:
+          'Me interesa aplicar lo aprendido en la carrera y aportar al equipo de trabajo de la organización.',
+      },
+    });
+  }
+
   // ─── Rúbricas del período (RN-10: 60 % empresarial, 40 % académica) ───
   await prisma.rubrica.createMany({
     data: [
