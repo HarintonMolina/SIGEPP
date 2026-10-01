@@ -9,7 +9,10 @@ export default tseslint.config(
   {
     languageOptions: { globals: globals.node },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
       'no-console': ['warn', { allow: ['info', 'warn', 'error'] }],
     },
   },
