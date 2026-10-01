@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { contextoActual } from './contexto.js';
 import { prisma } from './prisma.js';
 
 interface EventoAuditoria {
@@ -11,8 +12,21 @@ interface EventoAuditoria {
   ip?: string | null;
 }
 
-/** RNF-13: registra una operación sobre una entidad crítica en la bitácora de auditoría. */
+/**
+ * RNF-13: registra una operación sobre una entidad crítica en la bitácora de auditoría
+ * (usuario, IP, marca de tiempo y valores anterior y posterior). Si no se indican el
+ * usuario o la IP, se toman del contexto de la petición en curso.
+ */
 export const registrarAuditoria = (
   evento: EventoAuditoria,
   cliente: Prisma.TransactionClient = prisma,
-) => cliente.auditoria.create({ data: evento });
+) => {
+  const contexto = contextoActual();
+  return cliente.auditoria.create({
+    data: {
+      ...evento,
+      usuarioId: evento.usuarioId ?? contexto.usuarioId ?? null,
+      ip: evento.ip ?? contexto.ip ?? null,
+    },
+  });
+};

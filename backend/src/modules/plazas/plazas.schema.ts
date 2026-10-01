@@ -32,12 +32,9 @@ const camposPlaza = {
 export const crearPlazaSchema = z
   .object({
     ...camposPlaza,
-    organizacionId: z
-      .string()
-      .optional()
-      .openapi({
-        description: 'Solo para el administrador; la organización publica siempre a su nombre.',
-      }),
+    organizacionId: z.string().optional().openapi({
+      description: 'Solo para el administrador; la organización publica siempre a su nombre.',
+    }),
   })
   .openapi('CrearPlaza');
 
@@ -66,11 +63,9 @@ export const listarPlazasQuery = z.object({
   modalidad: modalidadSchema.optional(),
   ubicacion: z.string().trim().max(80).optional(),
   organizacionId: z.string().optional(),
-  estado: estadoPlazaSchema
-    .optional()
-    .openapi({
-      description: 'Solo coordinación y administración; para los demás roles siempre es APROBADA.',
-    }),
+  estado: estadoPlazaSchema.optional().openapi({
+    description: 'Solo coordinación y administración; para los demás roles siempre es APROBADA.',
+  }),
   orden: z.enum(['recientes', 'titulo', 'cupos']).default('recientes'),
   ...paginacionQuery,
 });
