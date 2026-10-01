@@ -27,3 +27,13 @@ export const limiteAutenticacion = rateLimit({
   skip: omitirEnPruebas,
   message: respuesta('Demasiados intentos, intenta de nuevo en 15 minutos'),
 });
+
+/** API pública de plazas (RF-26): 60 peticiones por minuto por dirección IP. */
+export const limitePublico = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: omitirEnPruebas,
+  message: respuesta('Límite de la API pública alcanzado, intenta de nuevo en un minuto'),
+});
