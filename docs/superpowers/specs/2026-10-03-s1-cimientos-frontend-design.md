@@ -2,7 +2,7 @@
 
 Fecha: 3 de octubre de 2026. Alcance: S1-H1 a S1-H6, RF-01, RF-02 y RF-04.
 
-Estado: diseño conversacional aprobado por el usuario; especificación escrita pendiente de su revisión y aprobación. Este documento define el resultado esperado. No constituye el plan de implementación ni autoriza todavía la creación del frontend.
+Estado: diseño conversacional y especificación escrita aprobados por el usuario el 3 de octubre de 2026. Está autorizada la elaboración del plan de implementación. La ejecución requiere todavía la revisión de ese plan y la elección del método de trabajo.
 
 ## 1. Propósito y límites
 
@@ -271,6 +271,6 @@ Antes de declarar la implementación técnicamente lista se aplicarán `superpow
 
 ## 12. Estado de la revisión y siguiente paso
 
-El usuario aprobó los seis bloques de diseño para redactar esta especificación. Su revisión escrita debe resolver si estos contratos, límites y criterios representan correctamente lo acordado. Después de la aprobación explícita se invocará `superpowers:writing-plans`; el usuario revisará ese plan y elegirá ejecución mediante `superpowers:executing-plans` o `superpowers:subagent-driven-development` antes de implementar.
+El usuario aprobó los seis bloques de diseño y posteriormente esta especificación escrita, autorizando elaborar el plan con `superpowers:writing-plans`. El usuario revisará ese plan y elegirá ejecución mediante `superpowers:executing-plans` o `superpowers:subagent-driven-development` antes de implementar. Esta aprobación no sustituye la revisión técnica ni la aprobación humana del futuro PR.
 
 En la exploración inicial no había dependencias instaladas ni `.env` del backend, y la consulta de `/api/health` agotó el tiempo de espera. Son observaciones del entorno, no fallos verificados del producto. Durante esta etapa solo se revisa documentación: no se han ejecutado build, pruebas funcionales ni demo de frontend.
