@@ -30,3 +30,12 @@ desktop.ini
 
 # Archivos temporales de Office (abiertos)
 ~$*
+
+# Artefactos de pruebas del frontend
+frontend/test-results/
+frontend/playwright-report/
+frontend/.e2e/
+
+# Archivos locales de Superpowers
+/.superpowers/
+/docs/superpowers/
