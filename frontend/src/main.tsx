@@ -8,6 +8,8 @@ import './config/env';
 import './styles/tokens.css';
 import './styles/global.css';
 import { App } from './app/App';
+import { Providers } from './app/Providers';
+import { runtime } from './app/runtime';
 
 const root = document.getElementById('root');
 
@@ -17,6 +19,6 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <Providers runtime={runtime}><App /></Providers>
   </StrictMode>,
 );
