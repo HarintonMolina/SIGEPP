@@ -1,4 +1,4 @@
-import { forwardRef, useId, type FocusEventHandler } from 'react';
+import { forwardRef, useId, useState, type FocusEventHandler } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import type { FieldProps } from './field.types';
@@ -17,6 +17,7 @@ export interface SelectProps extends FieldProps {
 export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select(
   { label, help, error, id, name, value, options, onValueChange, onBlur, disabled, required }, ref,
 ) {
+  const [open, setOpen] = useState(false);
   const uniqueId = useId();
   const controlId = id ?? `${uniqueId}-select`;
   const labelId = `${uniqueId}-label`;
@@ -25,13 +26,22 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
   const description = [help && helpId, error && errorId].filter(Boolean).join(' ') || undefined;
   return <div className="ui-field">
     <label id={labelId} htmlFor={controlId} className="ui-field-label">{label}</label>
-    <RadixSelect.Root name={name} value={value} onValueChange={onValueChange} disabled={disabled} required={required}>
+    <RadixSelect.Root open={open} onOpenChange={setOpen} name={name} value={value} onValueChange={onValueChange} disabled={disabled} required={required}>
       <RadixSelect.Trigger ref={ref} id={controlId} onBlur={onBlur} aria-labelledby={labelId} aria-describedby={description} aria-invalid={error ? true : undefined} className="ui-control ui-select-trigger">
         <RadixSelect.Value placeholder="Selecciona una opción" />
         <RadixSelect.Icon asChild><ChevronDown className="ui-icon" aria-hidden="true" /></RadixSelect.Icon>
       </RadixSelect.Trigger>
       <RadixSelect.Portal>
-        <RadixSelect.Content position="popper" sideOffset={4} className="ui-select-content">
+        <RadixSelect.Content
+          onKeyDown={(event) => {
+            // A newer Toast can handle Escape in capture without consuming it.
+            // Radix still owns normal dismissal and restores focus on unmount.
+            if (event.key !== 'Escape' || event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }}
+          position="popper" sideOffset={4} className="ui-select-content">
           <RadixSelect.ScrollUpButton className="ui-select-scroll"><ChevronUp className="ui-icon" aria-hidden="true" /></RadixSelect.ScrollUpButton>
           <RadixSelect.Viewport>
             {options.map((option) => <RadixSelect.Item key={option.value} value={option.value} className="ui-select-option">

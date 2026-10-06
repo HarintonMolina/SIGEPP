@@ -2,10 +2,14 @@ import { createRef, useState } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { Controller, useForm } from 'react-hook-form';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
 import { Textarea } from './Textarea';
+import { Modal } from './Modal';
+import { ToastProvider } from './Toast';
+import { useToast } from '../hooks/useToast';
 
 describe('campos institucionales', () => {
   it('asocia Correo, ayuda y error; conserva descripciones externas', async () => {
@@ -85,6 +89,138 @@ describe('campos institucionales', () => {
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       await userEvent.tab();
       expect(onBlur).toHaveBeenCalled();
+    } finally {
+      if (scrollDescriptor) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollDescriptor);
+      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    }
+  });
+
+  it.each([
+    { order: 'antes', depth: 0 },
+    { order: 'después', depth: 0 },
+    { order: 'antes', depth: 1 },
+    { order: 'después', depth: 1 },
+    { order: 'antes', depth: 2 },
+    { order: 'después', depth: 2 },
+  ])('Select cierra con el primer Escape con aviso $order de abrir en $depth Modales', async ({ order, depth }) => {
+    const user = userEvent.setup();
+    const scrollDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: () => {} });
+    const selection = vi.fn();
+    const blur = vi.fn();
+    const outerChanges = vi.fn();
+    const innerChanges = vi.fn();
+    const ref = createRef<HTMLButtonElement>();
+    let releaseNotice!: () => void;
+    const noticeReady = new Promise<void>((resolve) => { releaseNotice = resolve; });
+    function View() {
+      const [outerOpen, setOuterOpen] = useState(false);
+      const [innerOpen, setInnerOpen] = useState(false);
+      const [value, setValue] = useState('uno');
+      const { notify } = useToast();
+      const controls = <form>
+        <button type="button" onClick={() => { void noticeReady.then(() => notify({ title: 'Acción recibida', tone: 'informacion' })); }}>Programar aviso</button>
+        <Select ref={ref} name="rol" label="Rol" value={value} options={[{ value: 'uno', label: 'Primero' }, { value: 'dos', label: 'Segundo' }]} onValueChange={(next) => { selection(next); setValue(next); }} onBlur={blur} />
+      </form>;
+      const content = depth === 2 ? <Modal open={innerOpen} onOpenChange={(next) => { innerChanges(next); setInnerOpen(next); }} title="Interior" description="Opciones" trigger={<Button>Abrir interior</Button>}>{controls}</Modal> : controls;
+      return depth === 0 ? controls : <Modal open={outerOpen} onOpenChange={(next) => { outerChanges(next); setOuterOpen(next); }} title="Exterior" description="Acciones" trigger={<Button>Abrir exterior</Button>}>{content}</Modal>;
+    }
+    try {
+      render(<ToastProvider><View /></ToastProvider>);
+      if (depth > 0) await user.click(screen.getByRole('button', { name: 'Abrir exterior' }));
+      if (depth === 2) await user.click(screen.getByRole('button', { name: 'Abrir interior' }));
+      await user.click(screen.getByRole('button', { name: 'Programar aviso' }));
+      if (order === 'antes') await act(async () => { releaseNotice(); await noticeReady; });
+      const trigger = screen.getByRole('combobox', { name: 'Rol' });
+      expect(ref.current).toBe(trigger);
+      act(() => ref.current?.focus());
+      await user.keyboard('{Enter}');
+      expect(screen.getByRole('option', { name: 'Primero' })).toHaveFocus();
+      if (order === 'después') await act(async () => { releaseNotice(); await noticeReady; });
+      expect(screen.getByRole('button', { name: 'Cerrar aviso', hidden: true })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Primero' })).toHaveFocus();
+      outerChanges.mockClear();
+      innerChanges.mockClear();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(trigger).toHaveTextContent('Primero');
+      expect(new FormData(trigger.closest('form')!).get('rol')).toBe('uno');
+      expect(selection).not.toHaveBeenCalled();
+      expect(blur).toHaveBeenCalledTimes(1);
+      expect(screen.queryAllByRole('dialog', { hidden: true })).toHaveLength(depth);
+      expect(outerChanges).not.toHaveBeenCalled();
+      expect(innerChanges).not.toHaveBeenCalled();
+      // Reopening still uses Radix navigation and emits only the chosen value.
+      await user.keyboard('{Enter}{ArrowDown}{Enter}');
+      expect(selection).toHaveBeenCalledExactlyOnceWith('dos');
+      expect(trigger).toHaveFocus();
+      expect(trigger).toHaveTextContent('Segundo');
+      expect(new FormData(trigger.closest('form')!).get('rol')).toBe('dos');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(blur).toHaveBeenCalledTimes(2);
+      expect(outerChanges).not.toHaveBeenCalled();
+      expect(innerChanges).not.toHaveBeenCalled();
+      if (depth > 0) {
+        await user.keyboard('{Escape}');
+        if (depth === 2) {
+          expect(innerChanges).toHaveBeenCalledExactlyOnceWith(false);
+          expect(outerChanges).not.toHaveBeenCalled();
+          expect(screen.getByRole('button', { name: 'Abrir interior' })).toHaveFocus();
+          expect(screen.queryAllByRole('dialog')).toHaveLength(1);
+          await user.keyboard('{Escape}');
+        }
+        expect(outerChanges).toHaveBeenCalledExactlyOnceWith(false);
+        if (depth === 2) expect(innerChanges).toHaveBeenCalledExactlyOnceWith(false);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Abrir exterior' })).toHaveFocus();
+      }
+    } finally {
+      if (scrollDescriptor) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollDescriptor);
+      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    }
+  });
+
+  it('Select conserva ref, blur y valor de Controller al descartar un aviso posterior', async () => {
+    const user = userEvent.setup();
+    const scrollDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: () => {} });
+    const submit = vi.fn();
+    let releaseNotice!: () => void;
+    const noticeReady = new Promise<void>((resolve) => { releaseNotice = resolve; });
+    function Form() {
+      const { control, handleSubmit, setFocus, formState: { touchedFields } } = useForm({ defaultValues: { rol: 'uno' } });
+      const { notify } = useToast();
+      return <form onSubmit={handleSubmit((values) => submit(values))}>
+        <button type="button" onClick={() => { void noticeReady.then(() => notify({ title: 'Acción recibida', tone: 'informacion' })); }}>Programar aviso</button>
+        <button type="button" onClick={() => setFocus('rol')}>Enfocar rol</button>
+        <Controller name="rol" control={control} render={({ field }) => <Select ref={field.ref} name={field.name} value={field.value} onValueChange={field.onChange} onBlur={field.onBlur} label="Rol" options={[{ value: 'uno', label: 'Primero' }, { value: 'dos', label: 'Segundo' }]} />} />
+        <p>{touchedFields.rol ? 'Rol visitado' : 'Rol sin visitar'}</p>
+        <button type="submit">Enviar</button>
+      </form>;
+    }
+    try {
+      render(<ToastProvider><Form /></ToastProvider>);
+      await user.click(screen.getByRole('button', { name: 'Programar aviso' }));
+      await user.click(screen.getByRole('button', { name: 'Enfocar rol' }));
+      const trigger = screen.getByRole('combobox', { name: 'Rol' });
+      expect(trigger).toHaveFocus();
+      expect(screen.getByText('Rol sin visitar')).toBeInTheDocument();
+      await user.keyboard('{Enter}');
+      expect(screen.getByRole('option', { name: 'Primero' })).toHaveFocus();
+      await act(async () => { releaseNotice(); await noticeReady; });
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(trigger).toHaveTextContent('Primero');
+      expect(screen.getByText('Rol visitado')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Enviar' }));
+      expect(submit).toHaveBeenCalledExactlyOnceWith({ rol: 'uno' });
+      submit.mockClear();
+      await user.click(screen.getByRole('button', { name: 'Enfocar rol' }));
+      await user.keyboard('{Enter}{ArrowDown}{Enter}');
+      await user.click(screen.getByRole('button', { name: 'Enviar' }));
+      expect(submit).toHaveBeenCalledExactlyOnceWith({ rol: 'dos' });
     } finally {
       if (scrollDescriptor) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollDescriptor);
       else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
