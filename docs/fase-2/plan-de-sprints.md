@@ -4,6 +4,8 @@
 **Período:** jueves 1 al sábado 17 de octubre de 2026 · **Entrega:** 18 de octubre de 2026
 **Equipo:** Leandro Enrique Lacayo Matus · Harinton Alberto Molina Narváez
 
+> Nota de compatibilidad de S1 (04/10/2026): el frontend usa Node 22, mínimo 22.12, y Vite 8.3.2 en lugar del Vite 5 previsto originalmente. React 18, Tailwind 3.4 y Router 6.30 se conservan. Esta nota no cambia la planificación histórica ni aprueba historias de otros sprints. Ver [verificación S1](s1-frontend-verificacion.md) para resultados y deuda de dependencias.
+
 ---
 
 ## 1. Replanificación respecto a la Fase 1
